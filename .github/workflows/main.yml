@@ -1,9 +1,12 @@
-name: Code Quality Check
+name: Check and update requirements
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
+  check_and_update:
     runs-on: ubuntu-latest
 
     steps:
@@ -13,18 +16,35 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.x
 
     - name: Install dependencies
       run: |
-        pip install flake8
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
 
-    - name: Run Flake8
+    - name: Check for updates
       run: |
-        flake8 .
+        source venv/bin/activate
+        pip list --outdated --format=columns | awk '{print $1}' > outdated_packages.txt
 
-    - name: Report results
-      uses: actions/upload-artifact@v2
+    - name: Update requirements.txt
+      if: steps.check_for_updates.outputs.packages != ''
+      run: |
+        source venv/bin/activate
+        while read package; do
+          pip install --upgrade $package
+        done < outdated_packages.txt
+        pip freeze > requirements.txt
+
+    - name: Commit changes
+      if: steps.check_for_updates.outputs.packages != ''
+      uses: actions/github-script@0.10.0
       with:
-        name: Flake8 results
-        path: flake8.txt
+        script: |
+          git config --local user.email "github-actions[at]github.com"
+          git config --local user.name "GitHub Actions"
+          git add requirements.txt
+          git diff --cached --exit-code || git commit -m "Update requirements.txt"
+          git push origin main
