@@ -1,0 +1,32 @@
+{
+    "REID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/ml-soccer-analysis/deep_sort_pytorch/deep_sort/model_weights/mars-small128.pb",
+    "DENSEPOSE_CONFIG": "/Users/brasd99/Desktop/Dissertation/detectron2/projects/DensePose/configs/densepose_rcnn_R_50_FPN_s1x.yaml",
+    "DENSEPOSE_WEIGHTS_URL": "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl",
+    "LAMA_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/regular-lama",
+    "TORCHREID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/ml-soccer-analysis/data/torchreid/model.pth.tar-60",
+    "TEXTURES_MODE": 1,
+    "MAX_VIDEO_LENGTH": -1,
+    "DEFAULT_CAMERA_PARAMS": {
+        "CAMERA_FPS": 5,
+        "PLAYER_DETECTION_TRESH": 0.8,
+        "BALL_DETECTION_TRESH": 0.2,
+        "MAX_BBOX_OVERLAP": 0.8
+    },
+    "CAMERA_OVERRIDEN_PARAMS": {
+        "0": {
+            "PLAYER_DETECTION_TRESH": 0.5,
+            "BALL_DETECTION_TRESH": 0.2,
+            "MAX_BBOX_OVERLAP": 0.6
+        },
+        "1": {
+            "PLAYER_DETECTION_TRESH": 0.8,
+            "BALL_DETECTION_TRESH": 0.2,
+            "MAX_BBOX_OVERLAP": 0.8
+        },
+        "2": {
+            "PLAYER_DETECTION_TRESH": 0.8,
+            "BALL_DETECTION_TRESH": 0.2,
+            "MAX_BBOX_OVERLAP": 0.8
+        }
+    }
+}
