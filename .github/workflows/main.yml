@@ -22,25 +22,16 @@ jobs:
       run: |
         python -m venv venv
         source venv/bin/activate
-        pip install -r requirements.txt
+        pip install pipreqs
 
-    - name: Check for updates
+    - name: Generate requirements.txt
       run: |
         source venv/bin/activate
-        pip list --outdated --format=columns | awk '{print $1}' > outdated_packages.txt
-
-    - name: Update requirements.txt
-      if: steps.check_for_updates.outputs.packages != ''
-      run: |
-        source venv/bin/activate
-        while read package; do
-          pip install --upgrade $package
-        done < outdated_packages.txt
-        pip freeze > requirements.txt
+        pipreqs --force .
 
     - name: Commit changes
-      if: steps.check_for_updates.outputs.packages != ''
-      uses: actions/github-script@0.10.0
+      if: steps.generate_requirements.outputs.changed == 'True'
+      uses: actions/github-script@v3
       with:
         script: |
           git config --local user.email "github-actions[at]github.com"
