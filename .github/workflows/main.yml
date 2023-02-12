@@ -27,7 +27,13 @@ jobs:
         pipreqs . --force
 
     - name: Commit and push changes
-      uses: eliasson/git-auto-commit-action@v2
+      uses: actions/github-script@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        message: Update requirements.txt
-        push: true
+        script: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add requirements.txt
+          git commit -m "Update requirements.txt"
+          git push
