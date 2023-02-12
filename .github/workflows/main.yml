@@ -1,11 +1,33 @@
-name: Update requirements.txt
-on: [push]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - name: Self test
-        id: selftest
+name: Update requirements
 
-        uses: ryan-rozario/pipreqs-action-cpy@master
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-requirements:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+
+    - name: Install dependencies
+      run: |
+        pip install pipreqs
+
+    - name: Generate requirements
+      run: |
+        pipreqs . --force
+
+    - name: Commit and push changes
+      uses: eliasson/git-auto-commit-action@v2
+      with:
+        message: Update requirements.txt
+        push: true
