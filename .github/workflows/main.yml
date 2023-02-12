@@ -1,15 +1,11 @@
-name: Integration Test
-on: [push]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - name: Self test
-        id: selftest
-
-        uses: ryan-rozario/pipreqs-action-cpy@master
-
-        # Put an example of mandatory inputs here
-        with:
-          REQUIREMENT_PATH: requirements.txt  #default is requirement.txt in the root of your repository 
+- name: Automatic requirements.txt with Python 3.10
+  # You may pin to the exact commit or the version.
+  # uses: ekvanox/pipreqs-action@78985e347cb5b65f3aef486ae9c4fe0938c4c77f
+  uses: ekvanox/pipreqs-action@v2.2.1
+  with:
+    # Gives the path of the project
+    PROJECT_PATH: # default is .
+    # Folder where requirements.txt has to be saved in
+    REQUIREMENT_PATH: # default is requirements.txt
+    # Name of the project to include in the commit
+    COMMIT_MESSAGE: # default is Updated requirements file
