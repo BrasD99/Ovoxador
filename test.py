@@ -24,9 +24,9 @@ tr_h = load_homography('/Users/brasd99/Downloads/homography_2.yml')
 
 homographies = [main_h, tl_h, tr_h]
 
-main_path = '/Users/brasd99/Desktop/Dissertation/ml-soccer-analysis/data/videos/camera_0.mov'
-tl_path = '/Users/brasd99/Desktop/Dissertation/ml-soccer-analysis/data/videos/camera_1.mov'
-tr_path = '/Users/brasd99/Desktop/Dissertation/ml-soccer-analysis/data/videos/camera_2.mov'
+main_path = '/Users/brasd99/Desktop/Dissertation/Ovoxador/data/videos/camera_0.mov'
+tl_path = '/Users/brasd99/Desktop/Dissertation/Ovoxador/data/videos/camera_1.mov'
+tr_path = '/Users/brasd99/Desktop/Dissertation/Ovoxador/data/videos/camera_2.mov'
 
 videos = [main_path, tl_path, tr_path]
 
