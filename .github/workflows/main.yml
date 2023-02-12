@@ -26,14 +26,22 @@ jobs:
       run: |
         pipreqs . --force
 
-    - name: Commit and push changes
-      uses: actions/github-script@v3
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        script: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
+    - name: Compare requirements
+      run: |
+        if ! cmp -s requirements.txt $(git rev-parse HEAD:requirements.txt); then
           git add requirements.txt
           git commit -m "Update requirements.txt"
           git push
+          echo "requirements.txt has changed"
+          echo "::set-output name=requirements_updated::true"
+        else
+          echo "requirements.txt has not changed"
+          echo "::set-output name=requirements_updated::false"
+        fi
+
+    - name: Dispatch event
+      if: steps.compare-requirements.outputs.requirements_updated == 'true'
+      uses: peter-evans/repo-dispatch@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event-type: requirements-updated
