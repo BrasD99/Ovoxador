@@ -1,4 +1,4 @@
-name: Integration Test
+name: Update requirements.txt
 on: [push]
 jobs:
   build:
