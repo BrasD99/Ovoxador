@@ -1,47 +1,15 @@
-name: Update requirements
-
-on:
-  push:
-    branches:
-      - main
-
+name: Integration Test
+on: [push]
 jobs:
-  update-requirements:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - uses: actions/checkout@master
+      - name: Self test
+        id: selftest
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.x
+        uses: ryan-rozario/pipreqs-action-cpy@master
 
-    - name: Install dependencies
-      run: |
-        pip install pipreqs
-
-    - name: Generate requirements
-      run: |
-        pipreqs . --force
-
-    - name: Compare requirements
-      run: |
-        if ! cmp -s requirements.txt $(git rev-parse HEAD:requirements.txt); then
-          git add requirements.txt
-          git commit -m "Update requirements.txt"
-          git push
-          echo "requirements.txt has changed"
-          echo "::set-output name=requirements_updated::true"
-        else
-          echo "requirements.txt has not changed"
-          echo "::set-output name=requirements_updated::false"
-        fi
-
-    - name: Dispatch event
-      if: steps.compare-requirements.outputs.requirements_updated == 'true'
-      uses: peter-evans/repo-dispatch@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        event-type: requirements-updated
+        # Put an example of mandatory inputs here
+        with:
+          REQUIREMENT_PATH: requirements.txt  #default is requirement.txt in the root of your repository 
