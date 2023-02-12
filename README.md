@@ -1,6 +1,6 @@
 # OVOXADOR
 
-## In Development.
+![Alt text](https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/banner-yolov8.png)
 
 ### Detector: YOLOv8
 ### Tracker: DeepSort

@@ -11,7 +11,6 @@ import concurrent.futures
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from tools.extractor import Extractor
-import scipy
 
 cfg = get_config()
 
