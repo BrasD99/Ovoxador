@@ -1,3 +1,6 @@
 [submodule "lama"]
 	path = lama
 	url = https://github.com/BrasD99/lama.git
+[submodule "PARE"]
+	path = PARE
+	url = https://github.com/BrasD99/PARE.git
