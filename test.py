@@ -180,7 +180,7 @@ texture_exporter = TextureExporter(cfg)
 extractor.export_players_textures(cameras, connections, texture_exporter, textures_path)
 
 # Saving pitch texture
-#extractor.export_pitch(cameras[0], homographies[0], textures_path)
+extractor.export_pitch(cameras[0], homographies[0], textures_path)
 # Saving frames
 extractor.export_frames(cameras, frames_path)
 # Saving homography matrixes
