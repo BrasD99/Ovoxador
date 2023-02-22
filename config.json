@@ -5,6 +5,8 @@
     "LAMA_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/regular-lama",
     "TORCHREID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/Ovoxador/data/torchreid/model.pth.tar-60",
     "TEXTURES_MODE": 1,
+    "PARE_CFG": "data/pare/checkpoints/pare_w_3dpw_config.yaml",
+    "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
     "MAX_VIDEO_LENGTH": 5,
     "DEFAULT_CAMERA_PARAMS": {
         "CAMERA_FPS": 1,
