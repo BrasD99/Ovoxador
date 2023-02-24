@@ -1,6 +1,4 @@
-<div style="border-radius: 50% !important; overflow: hidden; width: 200px; height: 200px;">
-  <img src="https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png" style="width: 100%; height: auto;">
-</div>
+![Alt text](https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png)
 
 Introducing a new system for training athletes. It processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
 
