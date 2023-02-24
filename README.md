@@ -1,4 +1,4 @@
-<div style="border-radius: 50%; overflow: hidden; width: 200px; height: 200px;">
+<div style="border-radius: 50% !important; overflow: hidden; width: 200px; height: 200px;">
   <img src="https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png" style="width: 100%; height: auto;">
 </div>
 
