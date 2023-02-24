@@ -1,6 +1,6 @@
 ![Alt text](https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png)
 
-Introducing a new system for training athletes. it processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
+Introducing a new system for training athletes. It processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
 
 The solution uses a variety of neural network models to solve the tasks:
 - [**YOLOv8**](https://github.com/ultralytics/ultralytics) - detector for detecting people and sports equipment on video frames,
