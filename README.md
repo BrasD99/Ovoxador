@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png" width="200" height="200" />
+  <img src="https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png" width="100%" height="auto" />
 </p>
 
 <h1 align="center">Ovoxador</h1>
