@@ -246,3 +246,36 @@ class Player:
         i = self.frame_ids.index(frame_id)
         return { 'id': self.id, 'bbox': self.bboxes[i], 'center': self.centers[i], 'h_center': self.h_centers[i] }
 
+class Dump:
+    def __init__(self, frames):
+        self.frames = frames
+
+class Frame:
+    def __init__(self, id, players):
+        self.id = id
+        self.players = players
+
+class Player:
+    def __init__(self, id, body, position):
+        self.id = id
+        self.body = body
+        self.position = position
+
+class Body:
+    def __init__(self, pose_output):
+        self.pose = pose_output['pose'][0]
+        self.betas = pose_output['betas'][0]
+
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, Player):
+            return obj.__dict__
+        if isinstance(obj, Frame):
+            return obj.__dict__
+        if isinstance(obj, Body):
+            return obj.__dict__
+        if isinstance(obj, Dump):
+            return obj.__dict__
+        return json.JSONEncoder.default(self, obj)

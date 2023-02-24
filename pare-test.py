@@ -1,23 +1,23 @@
 from tools.pose import PoseEstimator
-from tools.helpers import get_config
+from tools.helpers import get_config, Body, Player, Frame, Dump, CustomEncoder
 import cv2
+import numpy as np
+import json
+
 
 cfg = get_config()
 estimator = PoseEstimator(cfg)
 image = cv2.imread('/Users/brasd99/Desktop/Dissertation/outputs/output2.jpg')
 
-output = estimator.process(image)
+pose_output = estimator.process(image)
 
-import torch
-import smplx
+body = Body(pose_output)
+player = Player(1, body, [])
+frame = Frame(0, [player])
+frames = [frame]
+dump = Dump(frames)
 
-# Load the SMPL model
-model = smplx.create('/Users/brasd99/Desktop/Dissertation/Ovoxador/data/body_models/smpl/SMPL_NEUTRAL.pkl', model_type='smpl', gender='neutral')
+with open('/Users/brasd99/Desktop/Dissertation/outputs/project/output.json', 'w') as f:
+    json.dump(dump, f, cls=CustomEncoder)
 
-joints3d = output['joints3d']
-
-print(joints3d)
-
-#from PARE.pare.utils.vis_utils import show_3d_pose
-
-#show_3d_pose(joints3d[0])
+print('dump created')
