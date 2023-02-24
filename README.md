@@ -4,7 +4,7 @@
 
 <h1 align="center">Ovoxador</h1>
 
-<p align="center">
+<p>
   Introducing a new system for training athletes. It processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
 </p>
 
