@@ -6,6 +6,19 @@ import numpy as np
 from PIL import Image, ImageTk
 from .canvas.image_with_points import ImageWithPoints
 import os
+from tools.helpers import (
+    get_config, 
+    get_cameras_config, 
+    get_cameras_players, 
+    get_connections, 
+    get_players_images)
+from tools.camera import Camera
+from tools.extractor import Extractor, TextureExporter
+from tools.pose import PoseEstimator
+import shutil
+import threading
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tqdm
 
 class UploadPage(tk.Frame):
     def check_uploaded(self):
@@ -81,7 +94,8 @@ class VideoProcessPage(tk.Frame):
             src_image_index=0, 
             pil_image = self.unselected_img, 
             callback = self.set_points,
-            show_points = False)
+            show_points = False,
+            set_camera_point=False)
 
         self.left_image.grid(row=0, column=0, sticky='nesw')
 
@@ -95,16 +109,17 @@ class VideoProcessPage(tk.Frame):
             src_image_index=0, 
             pil_image = self.dst_pil_img, 
             callback = self.set_points,
-            show_points = False)
+            show_points = False,
+            set_camera_point = True)
         
         self.right_image.grid(row=0, column=1, sticky='nesw')
 
         back_btn = ttk.Button(self, text = "Back", command = lambda : controller.show_frame(UploadPage))
         back_btn.grid(row = 3, column = 0, columnspan = 1)
 
-        next_btn = ttk.Button(self, text = "Next", command = lambda : self.save_homography())
-        next_btn.grid(row = 3, column = 1, columnspan = 1)
-
+        self.next_btn = ttk.Button(self, text = "Next", command = lambda : self.confirm_homography(controller))
+        self.next_btn.grid(row = 3, column = 1, columnspan = 1)
+        
         self.canvas = tk.Canvas(self, width=800, height=150)
         self.canvas.grid(row=1, column=0, columnspan=2)
 
@@ -125,7 +140,21 @@ class VideoProcessPage(tk.Frame):
     def read_cv_image(self, image_path):
         img = cv2.imread(image_path)
         return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    def confirm_homography(self, controller):
+        src_points_dict = {}
+        dst_points_dict = {}
 
+        for video_id in range(len(self.image_points)):
+            if self.image_points[video_id] and self.dst_points[video_id]:
+                src_points = np.array([[point['x'], point['y']] for point in self.image_points[video_id]], dtype=np.float32)
+                dst_points = np.array([[point['x'], point['y']] for point in self.dst_points[video_id]], dtype=np.float32)
+                src_points_dict[video_id] = src_points
+                dst_points_dict[video_id] = dst_points
+
+        controller.set_points(src_points_dict, dst_points_dict)
+        controller.show_frame(Processor)
+        
     def save_homography(self):
         for video_id in range(len(self.image_points)):
             if self.image_points[video_id] and self.dst_points[video_id]:
@@ -151,7 +180,7 @@ class VideoProcessPage(tk.Frame):
         frame = self.orig_frames[frame_index]
         src_points = np.array([[point['x'], point['y']] for point in self.image_points[frame_index]], dtype=np.float32)
         dst_points = np.array([[point['x'], point['y']] for point in self.dst_points[frame_index]], dtype=np.float32)
-        homography_matrix, _ = cv2.findHomography(src_points, dst_points)
+        homography_matrix, _ = cv2.findHomography(src_points, dst_points[:-1])
         rows, cols = self.dst_img.shape[:2]
         result = cv2.warpPerspective(frame, homography_matrix, (cols, rows))
         result = cv2.addWeighted(self.dst_img, 0.5, result, 0.5, 0)
@@ -268,3 +297,216 @@ class VideoProcessPage(tk.Frame):
         
         for i, video_path in enumerate(list(multiple_videos_path)):
             offset = self.set_label(video_path, f'Camera {i + 1}', offset = offset)
+
+class Processor(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        # Create a canvas widget to hold the frame
+        canvas = tk.Canvas(self)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Add a scrollbar to the canvas
+        scrollbar = tk.Scrollbar(self, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Attach the scrollbar to the canvas
+        canvas.config(yscrollcommand=scrollbar.set)
+
+        # Create a frame to hold the labels and entry widgets
+        frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame, anchor=tk.NW)
+
+        cameras_count = 3
+
+        self.config = get_config()
+        self.cameras_cfg = get_cameras_config(self.config, [i for i in range(cameras_count)])
+
+        row_num = 0
+
+        blocked_keys = ['DEFAULT_CAMERA_PARAMS', 'CAMERA_OVERRIDEN_PARAMS']
+
+        main_config_label = tk.Label(frame, text='Main config', font=("TkDefaultFont", 20, "bold"))
+        main_config_label.grid(column=0, row=row_num, columnspan=2, sticky="w")
+
+        row_num += 1
+
+        for key, value in self.config.items():
+            if not key in blocked_keys:
+                # Create a label for the parameter
+                label = tk.Label(frame, text=key)
+                label.grid(column=0, row=row_num)
+
+                # Create an entry widget for the parameter
+                var = tk.StringVar(frame, value=str(value))
+                entry = tk.Entry(frame, textvariable=var)
+
+                entry.grid(column=1, row=row_num, columnspan=2, sticky="w")
+                entry.bind("<FocusOut>", lambda event, key=key, var=var: self.update_config(self.config, key, var))
+                row_num+=1
+
+        for id in self.cameras_cfg:
+            camera_name = f'Camera {id + 1}'
+            if id == 0:
+                camera_name = 'Main camera'
+
+            camera_label = tk.Label(frame, text=camera_name, font=("TkDefaultFont", 20, "bold"))
+            camera_label.grid(column=0, row=row_num, columnspan=2, sticky="w")
+            row_num += 1
+
+            for key, value in self.cameras_cfg[id].items():
+                if not key in self.config:
+                    # Create a label for the parameter
+                    label = tk.Label(frame, text=key)
+                    label.grid(column=0, row=row_num)
+
+                    # Create an entry widget for the parameter
+                    var = tk.StringVar(frame, value=str(value))
+                    entry = tk.Entry(frame, textvariable=var)
+
+                    entry.grid(column=1, row=row_num)
+                    entry.bind("<FocusOut>", lambda event, key=key, var=var: self.update_config(self.cameras_cfg[id], key, var))
+
+                    row_num+=1
+
+        confirm_btn = ttk.Button(frame, text = "Confirm", command = lambda : self.confirm_clicked(canvas, frame, scrollbar))
+        confirm_btn.grid(row = row_num, column = 0, columnspan = 1)
+        # Update the scroll region of the canvas to fit the size of the frame
+        frame.update_idletasks()
+        canvas.config(scrollregion=canvas.bbox("all"))
+
+    def confirm_clicked(self, canvas, frame, scrollbar):
+        canvas.yview_moveto(0)
+        scrollbar.pack_forget()
+
+        # Hide all labels and entries
+        for child in frame.winfo_children():
+            child.grid_forget()
+
+        progress_var = tk.DoubleVar()
+        progress_bar = tk.ttk.Progressbar(frame, variable=progress_var, maximum=100)
+        progress_bar.grid(column=0, row=0, columnspan = 2)
+
+        my_thread = threading.Thread(target=self.start, args=(progress_var,))
+        my_thread.start()
+
+    def update_config(self, config, key, value):
+        config[key] = value.get()
+
+    def update_entry(self):
+        # get the selected key
+        selected_key = self.key_listbox.get(self.key_listbox.curselection())
+
+        # update the entry widget with the value of the selected key
+        if selected_key in self.config:
+            self.value_entry.delete(0, tk.END)
+            self.value_entry.insert(0, str(self.config[selected_key]))
+
+    def refresh(self, src_points_dict, dst_points_dict, single_video_path, multiple_video_path):
+        self.src_points_dict = src_points_dict
+        self.dst_points_dict = dst_points_dict
+        self.single_video_path = single_video_path
+        self.multiple_video_path = multiple_video_path
+
+    def start(self, progress_var):
+        homographies, camera_locations = self.get_homographies_and_cameras()
+        video_paths = self.get_video_paths()
+        directories = self.prepare_project_path(self.config['OUTPUT_FOLDER'], video_paths)
+        cameras = [
+            Camera(
+                video_file=video_paths[i], 
+                camera_id=i, 
+                homography=homographies[i], 
+                cfg=self.merge_configs(self.cameras_cfg[i])
+            )
+            for i in range(len(video_paths))
+        ]
+
+        for camera in cameras:
+            camera.process()
+
+        extractor = Extractor(cfg=self.config)
+
+        extractor.export_bboxes(cameras, directories['analytics_path'])
+
+        cameras_players = get_cameras_players(cameras, homographies)
+        main_camera_players = cameras_players[0]
+
+        connections = get_connections(
+            cameras, 
+            main_camera_players, 
+            cameras_players, 
+            extractor, 
+            directories['analytics_path'])
+        
+        texture_exporter = TextureExporter(self.config)
+        estimator = PoseEstimator(self.config)
+        # Saving players textures
+        extractor.export_players_textures(cameras, connections, texture_exporter, directories['textures_path'])
+        players_images = get_players_images(cameras, connections)
+        for player_id in players_images:
+            images = players_images[player_id]
+            for image in images:
+                pose_output = estimator.process(image)
+                print(pose_output)
+
+
+        # Saving pitch texture
+        extractor.export_pitch(cameras[0], homographies[0], directories['textures_path'])
+        # Saving frames
+        extractor.export_frames(cameras, directories['frames_path'])
+        # Saving homography matrixes
+        extractor.export_homography_array(homographies, directories['homographies_path'])
+        
+    def merge_configs(self, camera_config):
+        for key in self.config.keys():
+            if key in camera_config:
+                camera_config[key] = self.config[key]
+        return camera_config
+    
+    def get_video_paths(self):
+        return [self.single_video_path] + list(self.multiple_video_path)
+
+    def prepare_project_path(self, output_path, videos):
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path)
+        videos_path = os.path.join(output_path, 'videos')
+        frames_path = os.path.join(output_path, 'frames')
+        textures_path = os.path.join(output_path, 'textures')
+        homographies_path = os.path.join(output_path, 'homography')
+        analytics_path = os.path.join(output_path, 'analytics')
+
+        path_arr = [videos_path, frames_path, textures_path, homographies_path, analytics_path]
+
+        for i in range(len(videos)):
+            frame_path = os.path.join(frames_path, f'camera_{i}')
+            path_arr.append(frame_path)
+
+        for path in path_arr:
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+        for i, video_path in enumerate(videos):
+            _, ext = os.path.splitext(video_path)
+            shutil.copy(video_path, f'{videos_path}/camera_{i}{ext}')
+        
+        return {
+            'videos_path': videos_path,
+            'frames_path': frames_path,
+            'textures_path': textures_path,
+            'homographies_path': homographies_path,
+            'analytics_path': analytics_path
+        }
+        
+
+    def get_homographies_and_cameras(self):
+        homography_arr = []
+        cameras_location_arr = []
+        for video_id in self.src_points_dict.keys():
+            src_points = self.src_points_dict[video_id]
+            dst_points = self.dst_points_dict[video_id]
+            homography_matrix, _ = cv2.findHomography(src_points, dst_points[:-1])
+            homography_arr.append(homography_matrix)
+            cameras_location_arr.append(dst_points[len(dst_points) - 1])
+        return homography_arr, cameras_location_arr
+    

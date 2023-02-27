@@ -1,5 +1,5 @@
 import tkinter as tk
-from .pages import (VideoProcessPage, UploadPage)
+from .pages import (VideoProcessPage, UploadPage, Processor)
 
 class App(tk.Tk):
 
@@ -7,7 +7,7 @@ class App(tk.Tk):
 		
         tk.Tk.__init__(self, *args, **kwargs)
 		
-        self.title('ML Soccer Analysis')
+        self.title('Ovoxador')
         self.resizable(False, False)
 
         container = tk.Frame(self)
@@ -18,7 +18,7 @@ class App(tk.Tk):
 
         self.frames = {}
 
-        for F in (UploadPage, VideoProcessPage):
+        for F in (UploadPage, VideoProcessPage, Processor):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row = 0, column = 0, sticky ="nsew")
@@ -27,10 +27,19 @@ class App(tk.Tk):
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
-        #If calling VideoProcessPage, refreshing page
         if cont == VideoProcessPage:
             frame.refresh(self.single_video_path, self.multiple_video_path)
+        elif cont == Processor:
+            frame.refresh(
+                self.src_points_dict, 
+                self.dst_points_dict, 
+                self.single_video_path, 
+                self.multiple_video_path)
     
     def set_videos(self, single_video_path, multiple_video_path):
         self.single_video_path = single_video_path
         self.multiple_video_path = multiple_video_path
+    
+    def set_points(self, src_points_dict, dst_points_dict):
+        self.src_points_dict = src_points_dict
+        self.dst_points_dict = dst_points_dict

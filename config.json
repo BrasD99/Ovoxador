@@ -8,6 +8,7 @@
     "PARE_CFG": "data/pare/checkpoints/pare_w_3dpw_config.yaml",
     "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
     "MAX_VIDEO_LENGTH": 5,
+    "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
     "DEFAULT_CAMERA_PARAMS": {
         "CAMERA_FPS": 1,
         "PLAYER_DETECTION_TRESH": 0.8,

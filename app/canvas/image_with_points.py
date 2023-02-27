@@ -9,16 +9,19 @@ class ImageWithPoints(tk.Canvas):
         src_image_index, 
         pil_image,
         callback,
-        show_points = True):
+        show_points = True,
+        set_camera_point = False):
         super().__init__(parent, bg='green')
+        self.parent = parent
         self.image_index = image_index
+        self.set_camera_point = set_camera_point
         self.src_image_index = src_image_index
         self.pil_image = pil_image
         self.show_points = show_points
         self.original_pil_size = { 'height': pil_image.height, 'width': pil_image.width }
         self.callback = callback
         self.points = []
-        self.point_colors = ['green', 'blue', 'red', 'yellow']
+        self.point_colors = ['green', 'blue', 'red', 'yellow', 'white']
         self.point_coords = []
         self.bind("<Configure>", self.resize_image)
         self.bind("<ButtonRelease-1>", self.button_released)
@@ -54,10 +57,14 @@ class ImageWithPoints(tk.Canvas):
         self.replace_points()
     
     def replace_points(self):
+        points_count = 4
+        if self.set_camera_point:
+            points_count = 5
+
         if self.show_points:
             new_points = [
                 {'x': 20 + i * 20, 'y': 20 + i * 20}
-                for i in range(4)
+                for i in range(points_count)
             ] if len(self.points) == 0 else self.point_coords
 
             self.point_coords = []

@@ -255,7 +255,7 @@ class Frame:
         self.id = id
         self.players = players
 
-class Player:
+class PlayerDump:
     def __init__(self, id, body, position):
         self.id = id
         self.body = body
@@ -279,3 +279,149 @@ class CustomEncoder(json.JSONEncoder):
         if isinstance(obj, Dump):
             return obj.__dict__
         return json.JSONEncoder.default(self, obj)
+
+def euclidean_distance(p1, p2):
+    return np.sqrt(np.sum((p1 - p2) ** 2))
+
+def average_distance(array1, array2):
+    distances = []
+    for p1 in array1:
+        for p2 in array2:
+            distances.append(euclidean_distance(p1, p2))
+    return np.mean(distances)
+
+def align_players(main_camera_players, camera_players, similarity_tresh):
+    output = {}
+    for main_player in main_camera_players:
+        output[main_player.id] = {}
+        for camera_player in camera_players:
+            # Getting missed frames
+            missing_frame_ids = set(camera_player.frame_ids) - {frame_id for frame_id in main_player.frame_ids}
+            # Getting remaining frames
+            remaining_frame_ids = set([frame_id for frame_id in camera_player.frame_ids if frame_id not in missing_frame_ids])
+
+            if len(remaining_frame_ids) >= 5:
+                m_centers = []
+                c_centers = []
+                for remaining_frame_id in remaining_frame_ids:
+                    m_center = main_player.get_by_frame(remaining_frame_id)['h_center']
+                    c_center = camera_player.get_by_frame(remaining_frame_id)['h_center']
+                    m_centers.append(m_center)
+                    c_centers.append(c_center)
+                
+                similarity = average_distance(np.array(m_centers), np.array(c_centers))
+                if similarity <= similarity_tresh:
+                    output[main_player.id][camera_player.id] = { 'frames': {f_id + 1 for f_id in remaining_frame_ids}, 'similarity': similarity }
+
+    for main_player_id in output:
+        output[main_player_id] = dict(sorted(output[main_player_id].items(), key=lambda item: item[1]['similarity']))
+    return output
+
+def get_min_dist(aligned_players):
+    result = {}
+    for main_player_id, connections in aligned_players.items():
+        for camera_player_id, mse in connections.items():
+            if not (main_player_id, camera_player_id) in result:
+                result[(main_player_id, camera_player_id)] = mse
+            else:
+                if mse < result[(main_player_id, camera_player_id)]:
+                    result[(main_player_id, camera_player_id)] = mse
+    return result
+
+def get_optimal_connections(connections):
+    result = {}
+    blocked_person_ids = []
+    person_one_ids = set([k[0] for k in connections.keys()])
+    for person_one_id in person_one_ids:
+        person_two_ids = [k[1] for k in connections.keys() if k[0] == person_one_id]
+        for person_two_id in person_two_ids:
+            if not person_two_id in blocked_person_ids:
+                result[person_one_id] = {'id': person_two_id, 'similarity': connections[person_one_id, person_two_id]['similarity']}
+                blocked_person_ids.append(person_two_id)
+                break
+
+    return result
+
+def get_cameras_players(cameras, homographies):
+    cameras_players = []
+    for camera_id, camera in enumerate(cameras):
+        camera_players = []
+        player_tracks = camera.get_player_tracks()
+        for frame_num, frame_tracks in enumerate(player_tracks):
+            for track in frame_tracks['tracks']:
+                track_id = track['id']
+                box = track['box'].astype(int)
+                player = next((x for x in camera_players if x.id == track_id), None)
+                if not player:
+                    player = Player(track_id, homographies[camera_id])
+                    camera_players.append(player)
+                
+                player.add_bbox(frame_num, box)
+
+        cameras_players.append(camera_players)
+
+    return cameras_players
+
+
+def get_connections(cameras, main_camera_players, cameras_players, extractor, analytics_path):
+    connections = []
+
+    for i in range(1, len(cameras_players)):
+        aligned_players = align_players(main_camera_players, cameras_players[i], 100)
+        result = get_min_dist(aligned_players)
+        result = get_optimal_connections(result)
+        extractor.export_analytics(i, cameras, result, analytics_path)
+        connections.append(result)
+
+    return connections
+
+def get_players_images(cameras, connections):
+        main_camera = cameras[0]
+        main_camera_player_tracks = main_camera.get_player_tracks()
+        players_images = {}
+        for i in range(len(connections)):
+            other_camera = cameras[i + 1]
+            other_camera_player_tracks = other_camera.get_player_tracks()
+            for main_camera_player_id in connections[i]:
+                other_camera_player_id = connections[i][main_camera_player_id]['id']
+                main_player_images = get_player_images_by_id(main_camera, main_camera_player_tracks, main_camera_player_id)
+                other_player_images = get_player_images_by_id(other_camera, other_camera_player_tracks, other_camera_player_id)
+                if not main_camera_player_id in players_images:
+                    players_images[main_camera_player_id] = []
+                players_images[main_camera_player_id].extend(main_player_images)
+                players_images[main_camera_player_id].extend(other_player_images)
+
+        return players_images
+
+def get_player_images_by_id(camera, player_tracks, track_id):
+    output = []
+    for frame_num, frame_tracks in enumerate(player_tracks):
+        src_frame = camera.frames[frame_num]
+        for track in frame_tracks['tracks']:
+            if track['id'] == track_id:
+                box = track['box'].astype(int)
+                xmin, ymin, xmax, ymax = box
+                image = crop_image(xmin, ymin, xmax, ymax, src_frame)
+                #image = cv2.cvtColor(src_frame, cv2.COLOR_BGR2RGB)
+                output.append(image)
+    return output
+
+def crop_image(xmin, ymin, xmax, ymax, frame):
+    image = frame.copy()
+    # Check if ymin is less than zero
+    if ymin < 0:
+        ymin = 0
+
+    # Check if xmin is less than zero
+    if xmin < 0:
+        xmin = 0
+
+    # Check if ymax is greater than the number of rows in the image
+    if ymax > image.shape[0]:
+        ymax = image.shape[0]
+
+    # Check if xmax is greater than the number of columns in the image
+    if xmax > image.shape[1]:
+        xmax = image.shape[1]
+
+    return image[ymin:ymax, xmin:xmax]

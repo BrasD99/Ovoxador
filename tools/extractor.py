@@ -1,5 +1,11 @@
 from .texture import TextureExporter
-from .helpers import box_with_max_score, save_frame, save_homography, create_iuv
+from .helpers import (box_with_max_score, 
+                      save_frame, 
+                      save_homography, 
+                      create_iuv, 
+                      get_players_images, 
+                      get_player_images_by_id,
+                      crop_image)
 import numpy as np
 import os
 import concurrent.futures
@@ -42,9 +48,9 @@ class Extractor:
         main_camera_player_tracks = main_camera.get_player_tracks()
         other_camera_player_tracks = other_camera.get_player_tracks()
         for main_camera_player_id in connections:
-            main_player_images = self.get_player_images_by_id(main_camera, main_camera_player_tracks, main_camera_player_id)
+            main_player_images = get_player_images_by_id(main_camera, main_camera_player_tracks, main_camera_player_id)
             other_camera_player_id = connections[main_camera_player_id]['id']
-            other_player_images = self.get_player_images_by_id(other_camera, other_camera_player_tracks, other_camera_player_id)
+            other_player_images = get_player_images_by_id(other_camera, other_camera_player_tracks, other_camera_player_id)
             final_image = self.stack_images(main_player_images, other_player_images)
             cv2.imwrite(f'{path}/{main_camera_player_id}_{other_camera_player_id}.jpg', final_image)
 
@@ -71,37 +77,6 @@ class Extractor:
             x_offset += image.shape[1]
 
         return final_image
-    def get_player_images_by_id(self, camera, player_tracks, track_id):
-        output = []
-        for frame_num, frame_tracks in enumerate(player_tracks):
-            src_frame = camera.frames[frame_num]
-            for track in frame_tracks['tracks']:
-                if track['id'] == track_id:
-                    box = track['box'].astype(int)
-                    xmin, ymin, xmax, ymax = box
-                    image = self.crop_image(xmin, ymin, xmax, ymax, src_frame)
-                    #image = cv2.cvtColor(src_frame, cv2.COLOR_BGR2RGB)
-                    output.append(image)
-        return output
-    def crop_image(self, xmin, ymin, xmax, ymax, frame):
-        image = frame.copy()
-        # Check if ymin is less than zero
-        if ymin < 0:
-            ymin = 0
-
-        # Check if xmin is less than zero
-        if xmin < 0:
-            xmin = 0
-
-        # Check if ymax is greater than the number of rows in the image
-        if ymax > image.shape[0]:
-            ymax = image.shape[0]
-
-        # Check if xmax is greater than the number of columns in the image
-        if xmax > image.shape[1]:
-            xmax = image.shape[1]
-
-        return image[ymin:ymax, xmin:xmax]
     
     def export_frames(self, cameras, folder):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(cameras)) as executor:
@@ -180,7 +155,7 @@ class Extractor:
                 cv2.imwrite(f'{camera_path}/frame_{frame_id}.jpg', transformed_output)
 
     def export_players_textures(self, cameras, connections, texture_exporter, textures_path):
-        players_images = self.get_players_images(cameras, connections)
+        players_images = get_players_images(cameras, connections)
         for player_id in tqdm(players_images, f'Processing players textures exporter'):
             player_texture = None
             if self.cfg['TEXTURES_MODE']:
@@ -197,24 +172,3 @@ class Extractor:
                 player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
             imageio.imwrite(f'{textures_path}/player_{player_id}.png', player_texture)
-            
-            
-        
-
-    def get_players_images(self, cameras, connections):
-        main_camera = cameras[0]
-        main_camera_player_tracks = main_camera.get_player_tracks()
-        players_images = {}
-        for i in range(len(connections)):
-            other_camera = cameras[i + 1]
-            other_camera_player_tracks = other_camera.get_player_tracks()
-            for main_camera_player_id in connections[i]:
-                other_camera_player_id = connections[i][main_camera_player_id]['id']
-                main_player_images = self.get_player_images_by_id(main_camera, main_camera_player_tracks, main_camera_player_id)
-                other_player_images = self.get_player_images_by_id(other_camera, other_camera_player_tracks, other_camera_player_id)
-                if not main_camera_player_id in players_images:
-                    players_images[main_camera_player_id] = []
-                players_images[main_camera_player_id].extend(main_player_images)
-                players_images[main_camera_player_id].extend(other_player_images)
-
-        return players_images
