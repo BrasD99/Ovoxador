@@ -1,8 +1,17 @@
-![Alt text](https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png)
+<p align="center">
+  <img src="https://github.com/BrasD99/Ovoxador/blob/82c516abcdaba5af9768385d75d40fb4081377b2/assets/logo.png" width="100%" height="auto" />
+</p>
 
-Introducing a new system for training athletes. it processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
+<h1 align="center">Ovoxador</h1>
+
+<p>
+  Introducing a new system for training athletes. It processes video recordings of a team sport game from various cameras, combines data and presents them in virtual and augmented reality.
+</p>
+
+## Neural Network Models
 
 The solution uses a variety of neural network models to solve the tasks:
+
 - [**YOLOv8**](https://github.com/ultralytics/ultralytics) - detector for detecting people and sports equipment on video frames,
 - [**DeepSort**](https://github.com/ZQPei/deep_sort_pytorch) - tracker for detecting players on video frames,
 - [**TorchReId**](https://github.com/KaiyangZhou/deep-person-reid) - reidentification of players on various tracks,
