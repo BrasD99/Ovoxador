@@ -19,4 +19,5 @@ The solution uses a variety of neural network models to solve the tasks:
 - [**PARE**](https://github.com/mkocabas/PARE) - determine the pose of the player on the video frame,
 - [**LaMa**](https://github.com/saic-mdal/lama) - image processing and field texture acquisition.
 
+💻 Tested on macOS<br>
 :warning: The project is under development! :warning:
