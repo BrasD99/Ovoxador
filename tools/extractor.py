@@ -5,6 +5,7 @@ from .helpers import (box_with_max_score,
                       create_iuv, 
                       get_players_images, 
                       get_player_images_by_id,
+                      get_players_images_v2,
                       crop_image)
 import numpy as np
 import os
@@ -154,6 +155,30 @@ class Extractor:
                     cv2.circle(transformed_output, center, radius, color, thickness)
                 cv2.imwrite(f'{camera_path}/frame_{frame_id}.jpg', transformed_output)
 
+    def export_players_textures_v2(self, cameras, connections, texture_exporter, textures_path):
+        for main_player_id in connections.keys():
+            player_texture = None
+            other_camera_id = connections[main_player_id]['camera_id']
+            other_player_id = connections[main_player_id]['id']
+            other_player_images = get_players_images_v2(cameras[other_camera_id], other_player_id)
+            main_player_images = get_players_images_v2(cameras[0], main_player_id)
+            player_images = other_player_images + main_player_images
+            if self.cfg['TEXTURES_MODE']:
+                for image in tqdm(player_images, desc=f'Combining textures for player {main_player_id}', leave=True):
+                    output = texture_exporter.execute(image)[0]
+                    if 'pred_densepose' in output:
+                        texture = create_iuv(output, image)
+                        if player_texture is None or not player_texture.any():
+                            player_texture = texture
+                        else:
+                            player_texture = cv2.addWeighted(player_texture, 0.5, texture, 0.5, 0)
+            else:
+                player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
+
+            imageio.imwrite(f'{textures_path}/player_{main_player_id}.png', player_texture)
+
+
+    
     def export_players_textures(self, cameras, connections, texture_exporter, textures_path):
         players_images = get_players_images(cameras, connections)
         for player_id in tqdm(players_images, f'Processing players textures exporter'):

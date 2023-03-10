@@ -1,5 +1,5 @@
 from tools.pose import PoseEstimator
-from tools.helpers import get_config, Body, Player, Frame, Dump, CustomEncoder
+from tools.helpers import get_config, Body, PlayerDump, Frame, Dump, CustomEncoder
 import cv2
 import numpy as np
 import json
@@ -12,7 +12,7 @@ image = cv2.imread('/Users/brasd99/Desktop/Dissertation/outputs/output2.jpg')
 pose_output = estimator.process(image)
 
 body = Body(pose_output)
-player = Player(1, body, [])
+player = PlayerDump(1, body, [])
 frame = Frame(0, [player])
 frames = [frame]
 dump = Dump(frames)

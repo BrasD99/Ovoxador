@@ -11,6 +11,7 @@ import concurrent.futures
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from tools.extractor import Extractor
+import pickle
 
 cfg = get_config()
 
@@ -124,7 +125,7 @@ def align_players(main_camera_players, camera_players, similarity_tresh):
             # Getting remaining frames
             remaining_frame_ids = set([frame_id for frame_id in camera_player.frame_ids if frame_id not in missing_frame_ids])
 
-            if len(remaining_frame_ids) >= 5:
+            if len(remaining_frame_ids) >= 0:
                 m_centers = []
                 c_centers = []
                 for remaining_frame_id in remaining_frame_ids:
@@ -166,18 +167,57 @@ def get_optimal_connections(connections):
 
     return result
 
-connections = []
+def map_to_main_camera(aligned_arr):
+    output = {}
+    for camera_id in range(len(aligned_arr)):
+        for camera_player_id, connections in aligned_arr[camera_id].items():
+            for main_camera_player_id in connections.keys():
+                if not main_camera_player_id in output:
+                    output[main_camera_player_id] = []
+                
+                output[main_camera_player_id].append({
+                    'camera_id': camera_id + 1,
+                    'id': camera_player_id,
+                    'frames': connections[main_camera_player_id]['frames'],
+                    'similarity': connections[main_camera_player_id]['similarity']
+                })
+    for key, value in output.items():
+        sorted_value = sorted(value, key=lambda x: (len(x['frames']), x['similarity']))
+        output[key] = sorted_value
 
+    return output
+
+def get_optimal_main_connections(main_connections):
+    blocked = []
+    output = {}
+    for player_id in main_connections.keys():
+        if len(main_connections[player_id]) > 0:
+            connection = main_connections[player_id][0]
+            if not (connection['camera_id'], connection['id']) in blocked:
+                blocked.append((connection['camera_id'], connection['id']))
+                output[player_id] = {
+                    'camera_id': connection['camera_id'],
+                    'id': connection['id']
+                }
+    return dict(sorted(output.items()))
+
+
+#1. Соотносим игроков с других камер с игроками с основной камеры, 
+#запоминаем общие ид кадров и степень схожести по средней mse.
+
+aligned_arr = []
 for i in range(1, len(cameras_players)):
-    aligned_players = align_players(main_camera_players, cameras_players[i], 100)
-    result = get_min_dist(aligned_players)
-    result = get_optimal_connections(result)
-    extractor.export_analytics(i, cameras, result, analytics_path)
-    connections.append(result)
+    aligned_players = align_players(cameras_players[0], cameras_players[i], 200)
+    aligned_arr.append(aligned_players)
+
+# Ищем оптимальные связки
+main_connections = map_to_main_camera(aligned_arr)
+optimal_connections = get_optimal_main_connections(main_connections)
 
 texture_exporter = TextureExporter(cfg)
+
 # Saving players textures
-extractor.export_players_textures(cameras, connections, texture_exporter, textures_path)
+extractor.export_players_textures_v2(cameras, optimal_connections, texture_exporter, textures_path)
 
 # Saving pitch texture
 extractor.export_pitch(cameras[0], homographies[0], textures_path)

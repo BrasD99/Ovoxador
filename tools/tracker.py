@@ -18,8 +18,7 @@ class Tracker:
                  homography,
                  max_cosine_distance = 0.4, 
                  nn_budget = None,
-                 nms_max_overlap = 0.7,
-                 reid_tresh = 150
+                 nms_max_overlap = 0.7
                  ):
         
         metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -31,11 +30,10 @@ class Tracker:
         self.reidentificator = Reidentificator(cfg)
         self.images = {}
         self.track_ids = []
-        self.reid_tresh = reid_tresh
+        self.reid_tresh = cfg['REIDENTIFICATION_TRESH']
         self.track_bundles = {}
         self.first_frame = True
         self.homography = homography
-        self.inv_homography = np.linalg.inv(homography)
         current_path = os.path.dirname(os.path.abspath(__file__))
         parent_path = os.path.dirname(os.path.abspath(current_path))
         background_path = os.path.join(parent_path, 'data', 'gui', 'maket.jpeg')

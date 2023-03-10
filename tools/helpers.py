@@ -64,6 +64,7 @@ def get_cameras_config(cfg, camera_ids):
         camera_params["DENSEPOSE_WEIGHTS_URL"] = cfg["DENSEPOSE_WEIGHTS_URL"]
         camera_params["LAMA_MODEL_PATH"] = cfg["LAMA_MODEL_PATH"]
         camera_params["TORCHREID_MODEL_PATH"] = cfg["TORCHREID_MODEL_PATH"]
+        camera_params["REIDENTIFICATION_TRESH"] = cfg["REIDENTIFICATION_TRESH"]
         camera_params["TEXTURES_MODE"] = cfg["TEXTURES_MODE"]
 
         output[camera_id] = camera_params
@@ -270,7 +271,7 @@ class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        if isinstance(obj, Player):
+        if isinstance(obj, PlayerDump):
             return obj.__dict__
         if isinstance(obj, Frame):
             return obj.__dict__
@@ -374,6 +375,10 @@ def get_connections(cameras, main_camera_players, cameras_players, extractor, an
         connections.append(result)
 
     return connections
+
+def get_players_images_v2(camera, player_id):
+    other_camera_player_tracks = camera.get_player_tracks()
+    return get_player_images_by_id(camera, other_camera_player_tracks, player_id)
 
 def get_players_images(cameras, connections):
         main_camera = cameras[0]
