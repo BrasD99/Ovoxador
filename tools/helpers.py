@@ -380,6 +380,11 @@ def get_players_images_v2(camera, player_id):
     other_camera_player_tracks = camera.get_player_tracks()
     return get_player_images_by_id(camera, other_camera_player_tracks, player_id)
 
+def get_players_images_on_frames(camera, player_id, frame_ids):
+    other_camera_player_tracks = camera.get_player_tracks()
+    other_camera_player_tracks = [d for d in other_camera_player_tracks if d['frame_num'] in frame_ids]
+    return get_player_images_by_id(camera, other_camera_player_tracks, player_id)
+
 def get_players_images(cameras, connections):
         main_camera = cameras[0]
         main_camera_player_tracks = main_camera.get_player_tracks()

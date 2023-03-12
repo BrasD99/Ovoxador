@@ -2,6 +2,7 @@ from tools.helpers import load_homography, Player
 from tools.camera import Camera
 from tools.helpers import get_config, get_cameras_config, box_with_max_score, save_frame, save_homography, create_iuv
 from tools.texture import TextureExporter
+from tools.pose import PoseEstimator
 import cv2
 import numpy as np
 import glob
@@ -124,7 +125,7 @@ def align_players(main_camera_players, camera_players, similarity_tresh):
             missing_frame_ids = set(camera_player.frame_ids) - {frame_id for frame_id in main_player.frame_ids}
             # Getting remaining frames
             remaining_frame_ids = set([frame_id for frame_id in camera_player.frame_ids if frame_id not in missing_frame_ids])
-
+            
             if len(remaining_frame_ids) >= 0:
                 m_centers = []
                 c_centers = []
@@ -170,37 +171,68 @@ def get_optimal_connections(connections):
 def map_to_main_camera(aligned_arr):
     output = {}
     for camera_id in range(len(aligned_arr)):
-        for camera_player_id, connections in aligned_arr[camera_id].items():
-            for main_camera_player_id in connections.keys():
+        for main_camera_player_id, connections in aligned_arr[camera_id].items():
+            for camera_player_id in connections.keys():
                 if not main_camera_player_id in output:
                     output[main_camera_player_id] = []
                 
                 output[main_camera_player_id].append({
                     'camera_id': camera_id + 1,
                     'id': camera_player_id,
-                    'frames': connections[main_camera_player_id]['frames'],
-                    'similarity': connections[main_camera_player_id]['similarity']
+                    'frames': connections[camera_player_id]['frames'],
+                    'similarity': connections[camera_player_id]['similarity']
                 })
     for key, value in output.items():
-        sorted_value = sorted(value, key=lambda x: (len(x['frames']), x['similarity']))
+        sorted_value = sorted(value, key=lambda x: x['similarity'])
         output[key] = sorted_value
 
+    return output
+
+def get_blocked_frames(connections):
+    output = []
+    for connection in connections:
+        output = output + list(connection['frames'])
     return output
 
 def get_optimal_main_connections(main_connections):
     blocked = []
     output = {}
+
     for player_id in main_connections.keys():
         if len(main_connections[player_id]) > 0:
-            connection = main_connections[player_id][0]
-            if not (connection['camera_id'], connection['id']) in blocked:
-                blocked.append((connection['camera_id'], connection['id']))
-                output[player_id] = {
-                    'camera_id': connection['camera_id'],
-                    'id': connection['id']
-                }
+            for connection in main_connections[player_id]:
+                if not player_id in output:
+                    output[player_id] = []
+                if not (connection['camera_id'], connection['id']) in blocked:
+                    blocked.append((connection['camera_id'], connection['id']))
+                    blocked_frames = get_blocked_frames(output[player_id])
+                    available_frames = [num for num in connection['frames'] if num not in blocked_frames]
+                    if available_frames:
+                        output[player_id].append({
+                            'camera_id': connection['camera_id'],
+                            'id': connection['id'],
+                            'frames': available_frames
+                        })
     return dict(sorted(output.items()))
 
+def map_to_frames_output(pose_output_dict):
+    output_frames = {}
+    for player_id, inner_data in pose_output_dict.items():
+        for inner_player_data in inner_data:
+            if inner_player_data['frame'] not in output_frames:
+                output_frames[inner_player_data['frame']] = []
+            output_frames[inner_player_data['frame']].append({
+                'id': player_id,
+                'camera_id': inner_player_data['camera_id'],
+                'pose': inner_player_data['pose']
+            })
+    return dict(sorted(output_frames.items()))
+
+def map_to_general_output(frames_output, cameras_positions):
+    return {
+        'cameras': cameras_positions,
+        'frames': frames_output
+    }
 
 #1. Соотносим игроков с других камер с игроками с основной камеры, 
 #запоминаем общие ид кадров и степень схожести по средней mse.
@@ -215,10 +247,14 @@ main_connections = map_to_main_camera(aligned_arr)
 optimal_connections = get_optimal_main_connections(main_connections)
 
 texture_exporter = TextureExporter(cfg)
+pose_estimator = PoseEstimator(cfg)
 
 # Saving players textures
-extractor.export_players_textures_v2(cameras, optimal_connections, texture_exporter, textures_path)
-
+#extractor.export_players_textures_v2(cameras, optimal_connections, texture_exporter, textures_path)
+# Getting players poses
+output = extractor.export_poses(cameras, optimal_connections, pose_estimator)
+output = map_to_frames_output(output)
+output = map_to_general_output(output, [])
 # Saving pitch texture
 extractor.export_pitch(cameras[0], homographies[0], textures_path)
 # Saving frames
