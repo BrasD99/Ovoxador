@@ -5,6 +5,7 @@ import cv2
 import imageio
 import numpy as np
 import torch
+import shutil
 
 
 def filter_detections(detections, filter_class_id):
@@ -300,8 +301,8 @@ def align_players(main_camera_players, camera_players, similarity_tresh):
             missing_frame_ids = set(camera_player.frame_ids) - {frame_id for frame_id in main_player.frame_ids}
             # Getting remaining frames
             remaining_frame_ids = set([frame_id for frame_id in camera_player.frame_ids if frame_id not in missing_frame_ids])
-
-            if len(remaining_frame_ids) >= 5:
+            
+            if len(remaining_frame_ids) >= 0:
                 m_centers = []
                 c_centers = []
                 for remaining_frame_id in remaining_frame_ids:
@@ -343,8 +344,82 @@ def get_optimal_connections(connections):
 
     return result
 
+def map_to_main_camera(aligned_arr):
+    output = {}
+    for camera_id in range(len(aligned_arr)):
+        for main_camera_player_id, connections in aligned_arr[camera_id].items():
+            for camera_player_id in connections.keys():
+                if not main_camera_player_id in output:
+                    output[main_camera_player_id] = []
+                
+                output[main_camera_player_id].append({
+                    'camera_id': camera_id + 1,
+                    'id': camera_player_id,
+                    'frames': connections[camera_player_id]['frames'],
+                    'similarity': connections[camera_player_id]['similarity']
+                })
+    for key, value in output.items():
+        sorted_value = sorted(value, key=lambda x: x['similarity'])
+        output[key] = sorted_value
+
+    return output
+
+def get_blocked_frames(connections):
+    output = []
+    for connection in connections:
+        output = output + list(connection['frames'])
+    return output
+
+def get_optimal_main_connections(main_connections):
+    blocked = []
+    output = {}
+
+    for player_id in main_connections.keys():
+        if len(main_connections[player_id]) > 0:
+            for connection in main_connections[player_id]:
+                if not player_id in output:
+                    output[player_id] = []
+                if not (connection['camera_id'], connection['id']) in blocked:
+                    blocked.append((connection['camera_id'], connection['id']))
+                    blocked_frames = get_blocked_frames(output[player_id])
+                    available_frames = [num for num in connection['frames'] if num not in blocked_frames]
+                    if available_frames:
+                        output[player_id].append({
+                            'camera_id': connection['camera_id'],
+                            'id': connection['id'],
+                            'frames': available_frames
+                        })
+    return dict(sorted(output.items()))
+
+def map_to_frames_output(pose_output_dict, ball_positions_dict):
+    output_frames = {}
+    for player_id, inner_data in pose_output_dict.items():
+        for inner_player_data in inner_data:
+            if inner_player_data['frame'] not in output_frames:
+                output_frames[inner_player_data['frame']] = []
+            
+            ball_position = None
+            if inner_player_data['frame'] in ball_positions_dict:
+                ball_position = ball_positions_dict[inner_player_data['frame']]
+
+            output_frames[inner_player_data['frame']].append({
+                'id': player_id,
+                'camera_id': inner_player_data['camera_id'],
+                'pose': inner_player_data['pose'],
+                'player_position': inner_player_data['player_position'],
+                'ball_position': ball_position
+            })
+    return dict(sorted(output_frames.items()))
+
+def map_to_general_output(frames_output, cameras_positions):
+    return {
+        'cameras': cameras_positions,
+        'frames': frames_output
+    }
+
 def get_cameras_players(cameras, homographies):
     cameras_players = []
+
     for camera_id, camera in enumerate(cameras):
         camera_players = []
         player_tracks = camera.get_player_tracks()
@@ -360,21 +435,25 @@ def get_cameras_players(cameras, homographies):
                 player.add_bbox(frame_num, box)
 
         cameras_players.append(camera_players)
-
+    
     return cameras_players
 
-
-def get_connections(cameras, main_camera_players, cameras_players, extractor, analytics_path):
-    connections = []
-
+def get_aligned_players(cameras_players, tresh = 200):
+    aligned_arr = []
     for i in range(1, len(cameras_players)):
-        aligned_players = align_players(main_camera_players, cameras_players[i], 100)
-        result = get_min_dist(aligned_players)
-        result = get_optimal_connections(result)
-        extractor.export_analytics(i, cameras, result, analytics_path)
-        connections.append(result)
+        aligned_players = align_players(cameras_players[0], cameras_players[i], tresh)
+        aligned_arr.append(aligned_players)
+    return aligned_arr
 
-    return connections
+def get_optimal_players_connections(aligned_arr):
+    main_connections = map_to_main_camera(aligned_arr)
+    optimal_connections = get_optimal_main_connections(main_connections)
+    return optimal_connections
+
+def get_output_dict(pose_dict, ball_positions, cameras_positions):
+    output = map_to_frames_output(pose_dict, ball_positions)
+    output = map_to_general_output(output, cameras_positions)
+    return output
 
 def get_players_images_v2(camera, player_id):
     other_camera_player_tracks = camera.get_player_tracks()
@@ -384,6 +463,39 @@ def get_players_images_on_frames(camera, player_id, frame_ids):
     other_camera_player_tracks = camera.get_player_tracks()
     other_camera_player_tracks = [d for d in other_camera_player_tracks if d['frame_num'] in frame_ids]
     return get_player_images_by_id(camera, other_camera_player_tracks, player_id)
+
+def create_output_directory(output_path, videos):
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+    videos_path = os.path.join(output_path, 'videos')
+    frames_path = os.path.join(output_path, 'frames')
+    textures_path = os.path.join(output_path, 'textures')
+    homographies_path = os.path.join(output_path, 'homography')
+    analytics_path = os.path.join(output_path, 'analytics')
+    dump_file = os.path.join(output_path, 'dump.bin')
+    path_arr = [videos_path, frames_path, textures_path, homographies_path, analytics_path]
+    create_directories(path_arr, videos, frames_path, videos_path)
+    return {
+        'videos_path': videos_path,
+        'frames_path': frames_path,
+        'textures_path': textures_path,
+        'homographies_path': homographies_path,
+        'analytics_path': analytics_path,
+        'dump_file': dump_file
+    }
+
+def create_directories(path_arr, videos, frames_path, videos_path):
+    for i in range(len(videos)):
+        frame_path = os.path.join(frames_path, f'camera_{i}')
+        path_arr.append(frame_path)
+
+    for path in path_arr:
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    for i, video_path in enumerate(videos):
+        _, ext = os.path.splitext(video_path)
+        shutil.copy(video_path, f'{videos_path}/camera_{i}{ext}')
 
 def get_players_images(cameras, connections):
         main_camera = cameras[0]
@@ -435,3 +547,21 @@ def crop_image(xmin, ymin, xmax, ymax, frame):
         xmax = image.shape[1]
 
     return image[ymin:ymax, xmin:xmax]
+
+def get_ball_positions(cameras, homography_array):
+    output = {}
+    for camera_id, camera in enumerate(cameras):
+        ball_detections = camera.get_ball_detections()
+        for frame_num, ball_detection in enumerate(ball_detections):
+            if not frame_num + 1 in output:
+                output[frame_num + 1] = None
+                if len(ball_detection['scores']) > 0:
+                    max_index = ball_detection['scores'].index(max(ball_detection['scores']))
+                    bbox = ball_detection['boxes'][max_index]
+                    xmin, xmax, ymax = bbox[0], bbox[0] + bbox[2], bbox[1] + bbox[3]
+                    center = np.array([xmin + (xmax - xmin) // 2, ymax])
+                    point = np.array(center).reshape(-1, 1, 2).astype(np.float32)
+                    transformed_point = cv2.perspectiveTransform(point, homography_array[camera_id])[0][0]
+                    output[frame_num + 1] = transformed_point.tolist()
+    return output
+

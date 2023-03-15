@@ -11,7 +11,7 @@
     "MAX_VIDEO_LENGTH": 2,
     "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
     "DEFAULT_CAMERA_PARAMS": {
-        "CAMERA_FPS": 5,
+        "CAMERA_FPS": 2,
         "PLAYER_DETECTION_TRESH": 0.8,
         "BALL_DETECTION_TRESH": 0.2,
         "MAX_BBOX_OVERLAP": 0.8

@@ -7,7 +7,11 @@ from .helpers import (box_with_max_score,
                       get_player_images_by_id,
                       get_players_images_v2,
                       get_players_images_on_frames,
-                      crop_image)
+                      get_ball_positions,
+                      get_cameras_players,
+                      get_aligned_players,
+                      get_optimal_players_connections,
+                      get_output_dict)
 import numpy as np
 import os
 import concurrent.futures
@@ -15,6 +19,7 @@ import cv2
 import copy
 from tqdm import tqdm
 import imageio
+import pickle
 
 class Extractor:
     def __init__(self, cfg):
@@ -183,7 +188,7 @@ class Extractor:
 
             imageio.imwrite(f'{textures_path}/player_{main_player_id}.png', player_texture)
 
-    def export_poses(self, cameras, connections, pose_estimator):
+    def export_poses_and_positions(self, cameras, connections, cameras_players, pose_estimator):
         output = {}
         for main_player_id in tqdm(connections.keys(), desc='Exporting poses for players...'):
             output[main_player_id] = []
@@ -194,11 +199,18 @@ class Extractor:
                 other_player_images = get_players_images_on_frames(cameras[other_camera_id], other_player_id, other_player_frames)
                 for i in range(len(other_player_frames)):
                     pose = pose_estimator.process(other_player_images[i])
+                    # Getting player position
+                    camera_players = cameras_players[other_camera_id]
+                    player = [x for x in camera_players if x.id == other_player_id][0]
+                    player_frame_id = player.frame_ids.index(other_player_frames[i] - 1)
+                    player_position = player.h_centers[player_frame_id].tolist()
+
                     output[main_player_id].append({
                         'id': main_player_id,
                         'camera_id': other_camera_id,
                         'frame': other_player_frames[i],
-                        'pose': pose
+                        'pose': pose,
+                        'player_position': player_position
                     })
         return output
 
@@ -220,3 +232,47 @@ class Extractor:
                 player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
             imageio.imwrite(f'{textures_path}/player_{player_id}.png', player_texture)
+
+    def create_dump(self, data, dump_file):
+        with open(dump_file, 'wb') as file:
+            pickle.dump(data, file)
+
+    def export_all(
+            self,
+            cameras,
+            homographies,
+            texture_exporter,
+            pose_estimator,
+            export_dict, 
+            output_src_dict):
+        
+        ball_positions = get_ball_positions(cameras, homographies)
+        cameras_players = get_cameras_players(cameras, homographies)
+
+        aligned_arr = get_aligned_players(cameras_players)
+        optimal_connections = get_optimal_players_connections(aligned_arr)
+
+        poses_dict = self.export_poses_and_positions(cameras, optimal_connections, cameras_players, pose_estimator)
+        output = get_output_dict(poses_dict, ball_positions, [])
+
+        # Saving bboxes
+        if export_dict['boxes']:
+            self.export_bboxes(cameras, output_src_dict['analytics_path'])
+        # Saving centers
+        if export_dict['centers']:
+            self.export_centers(cameras, homographies, cameras_players, output_src_dict['analytics_path'])
+        # Creating dump
+        if export_dict['dump']:
+            self.create_dump(output, output_src_dict['dump_file'])
+        # Saving players textures
+        if export_dict['players_texture']:
+            self.export_players_textures_v2(cameras, optimal_connections, texture_exporter, output_src_dict['textures_path'])
+        # Saving pitch texture
+        if export_dict['pitch_texture']:
+            self.export_pitch(cameras[0], homographies[0], output_src_dict['textures_path'])
+        # Saving frames
+        if export_dict['frames']:
+            self.export_frames(cameras, output_src_dict['frames_path'])
+        # Saving homography matrixes
+        if export_dict['homography']:
+            self.export_homography_array(homographies, output_src_dict['homographies_path'])
