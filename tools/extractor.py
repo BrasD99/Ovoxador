@@ -240,6 +240,7 @@ class Extractor:
     def export_all(
             self,
             cameras,
+            cameras_locations,
             homographies,
             texture_exporter,
             pose_estimator,
@@ -253,7 +254,7 @@ class Extractor:
         optimal_connections = get_optimal_players_connections(aligned_arr)
 
         poses_dict = self.export_poses_and_positions(cameras, optimal_connections, cameras_players, pose_estimator)
-        output = get_output_dict(poses_dict, ball_positions, [])
+        output = get_output_dict(poses_dict, ball_positions, cameras_locations)
 
         # Saving bboxes
         if export_dict['boxes']:

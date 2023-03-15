@@ -37,6 +37,8 @@ cameras = [
     for i in range(cameras_count)
 ]
 
+cameras_locations = []
+
 extractor = Extractor(cfg=cfg)
 
 for camera in cameras:
@@ -56,7 +58,8 @@ texture_exporter = TextureExporter(cfg)
 pose_estimator = PoseEstimator(cfg)
 
 extractor.export_all(
-    cameras=cameras, 
+    cameras=cameras,
+    cameras_locations=cameras_locations,
     homographies=homographies,
     texture_exporter=texture_exporter,
     pose_estimator=pose_estimator,
