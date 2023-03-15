@@ -49,7 +49,7 @@ export_dict = {
     'frames': True,
     'homography': True,
     'pitch_texture': True,
-    'players_texture': False
+    'players_texture': True
 }
 
 texture_exporter = TextureExporter(cfg)

@@ -5,7 +5,7 @@
     "LAMA_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/regular-lama",
     "TORCHREID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/Ovoxador/data/torchreid/model.pth.tar-60",
     "REIDENTIFICATION_TRESH": 300,
-    "TEXTURES_MODE": 1,
+    "TEXTURES_MODE": 0,
     "PARE_CFG": "data/pare/checkpoints/pare_w_3dpw_config.yaml",
     "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
     "MAX_VIDEO_LENGTH": 2,
