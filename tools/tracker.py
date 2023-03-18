@@ -9,7 +9,8 @@ from .encoder import ImageEncoder
 from tools.reidentificator import Reidentificator
 
 import os
-
+import pickle
+import math
 
 class Tracker:
     def __init__(self,
@@ -28,9 +29,9 @@ class Tracker:
         self.tracking_output = []
         self.frame_num = 0
         self.reidentificator = Reidentificator(cfg)
-        self.images = {}
         self.track_ids = []
         self.reid_tresh = cfg['REIDENTIFICATION_TRESH']
+        self.reid_batch_size = cfg['REIDENTIFICATION_BATCH_SIZE']
         self.track_bundles = {}
         self.first_frame = True
         self.homography = homography
@@ -43,7 +44,7 @@ class Tracker:
     def get_tracks(self):
         return self.tracker.tracks
 
-    def predict(self, image, detections):
+    def predict(self, image, detections, db_conn):
         classes = detections['classes']
         boxes = detections['boxes']
         scores = detections['scores']
@@ -59,7 +60,7 @@ class Tracker:
         
         self.tracker.predict()
         self.tracker.update(detections)
-        self.update_tracker_output(image, self.reid_tresh)
+        self.update_tracker_output(image, self.reid_tresh, db_conn)
 
     def check_point(self, x, y):
         center = np.array([x, y])
@@ -67,10 +68,9 @@ class Tracker:
         point = cv2.perspectiveTransform(point, self.homography)[0][0]
         return (0 <= point[0] <= self.m_width) and (0 <= point[1] <= self.m_height)
 
-    def update_tracker_output(self, frame, tresh):
+    def update_tracker_output(self, frame, tresh, db_conn):
         self.frame_num += 1
         tracks = []
-        track_ids = [track.track_id for track in self.tracker.tracks]
         for track in self.tracker.tracks:
             # Get the track ID
             track_id = track.track_id
@@ -83,36 +83,34 @@ class Tracker:
                 image = self.crop_image(xmin, ymin, xmax, ymax, frame)
 
                 if not image.size == 0:
-                    
+                    image_features = self.reidentificator.get_image_features(image)
+
+                    # If track from first frame - bug fix
+                    if self.first_frame:
+                        self.track_bundles[track_id] = []
+
                     # If the track ID is already in the list of track IDs
-                    if track_id in self.track_ids or self.first_frame:
-                        self.track_ids.append(track_id)
+                    if track_id in self.track_ids:
                         tracks.append({'id': track_id, 'box': box})
                     else:
                         prev_track_id = self.find_parent_track(track_id)
 
                         if prev_track_id:
                             tracks.append({'id': prev_track_id, 'box': box})
+                            track_id = prev_track_id
                         else:
-                            prev_track_id = self.find_previous_track(image, tresh)
+                            prev_track_id = self.find_previous_track(tresh, db_conn, image_features)
                             # If a previous track ID is found
-                            if prev_track_id and not prev_track_id in track_ids:
-                                if prev_track_id not in self.track_bundles:
-                                    self.track_bundles[prev_track_id] = [track_id]
-                                else:
-                                    self.track_bundles[prev_track_id].append(track_id)
+                            if prev_track_id:
+                                # Just update bundle
+                                self.track_bundles[prev_track_id].append(track_id)
                                 tracks.append({'id': prev_track_id, 'box': box})
                                 track_id = prev_track_id
-                            # If a previous track ID is not found
                             else:
-                                self.track_ids.append(track_id)
                                 tracks.append({'id': track_id, 'box': box})
+                                self.track_ids.append(track_id)
 
-                    # Add the image for the current track ID
-                    if track_id not in self.images:
-                        self.images[track_id] = [image]
-                    elif len(self.images[track_id]) < 8:
-                        self.images[track_id].append(image)
+                    self.insert_feature(track_id, image_features, db_conn)
 
         self.tracking_output.append({'frame_num': self.frame_num, 'tracks': tracks})
         self.first_frame = False
@@ -121,6 +119,13 @@ class Tracker:
         for key, values in self.track_bundles.items():
             if track_id in values:
                 return key
+        return None
+    
+    def get_id_from_bundle(self, track_id):
+        for parent_track_id, child_track_ids in self.track_bundles.items():
+            if track_id == parent_track_id or track_id in child_track_ids:
+                return parent_track_id
+        
         return None
     
     def crop_image(self, xmin, ymin, xmax, ymax, frame):
@@ -143,19 +148,27 @@ class Tracker:
 
         return image[ymin:ymax, xmin:xmax]
 
-    def find_previous_track(self, image, tresh):
+    def find_previous_track(self, tresh, db_conn, image_features):
+        db_person_ids = self.get_distinct_person_ids(db_conn)
+        tmp_features_dict = {}
+        
+        for person_id in db_person_ids:
+            features_count = self.get_person_features_count(person_id, db_conn)
+            num_iterations = math.ceil(features_count / self.reid_batch_size)
+            for i in range(num_iterations):
+                offset = i * self.reid_batch_size
+                gallery_features = self.get_person_features(person_id, db_conn, self.reid_batch_size, offset)
+                features = self.reidentificator.get_features_v2(image_features, gallery_features)
+                min_feature = features[0].min()
+                if min_feature <= tresh:
+                    if person_id in tmp_features_dict:
+                        if min_feature < tmp_features_dict[person_id]:
+                            tmp_features_dict[person_id] = min_feature
+                    else:
+                        tmp_features_dict[person_id] = min_feature
 
-        tmp_dict = {}
-        for key in self.images:
-            gallery_imgs = self.images[key]
-            query_imgs = [image]
-            features = self.reidentificator.get_features(query_imgs, gallery_imgs)
-            min_feature = features[0].min()
-            if min_feature <= tresh:
-                tmp_dict[key] = min_feature
-
-        if tmp_dict:
-            return min(tmp_dict, key=tmp_dict.get)
+        if tmp_features_dict:
+            return min(tmp_features_dict, key=tmp_features_dict.get)
             
         return None
 
@@ -198,3 +211,40 @@ class Tracker:
 
         return encoder
     
+    def get_person_features_count(self, person_id, db_conn):
+        cursor = db_conn.execute('SELECT COUNT(*) FROM features WHERE person_id = ?', (person_id,))
+        return cursor.fetchone()[0]
+    
+    def get_person_features(self, person_id, db_conn, batch_size, offset):
+        # select batch_size rows from the features table that have a matching person_id
+        cursor = db_conn.execute('SELECT feature FROM features WHERE person_id = ? LIMIT ? OFFSET ?', (person_id, batch_size, offset))
+
+        # retrieve the feature vectors from the rows and convert them back to numpy arrays using pickle
+        features = []
+        for row in cursor:
+            feature_bytes = row[0]
+            feature = pickle.loads(feature_bytes)
+            features.append(feature)
+        features = np.stack(features)
+        features = np.squeeze(features, axis=1)  # remove extra dimension
+
+        return features
+    
+    def insert_feature(self, person_id, feature, db_conn):
+        # convert feature vector to bytes using pickle
+        feature_bytes = pickle.dumps(feature)
+
+        # insert the feature vector into the database
+        db_conn.execute('INSERT INTO features (person_id, feature) VALUES (?, ?)', (person_id, feature_bytes))
+
+        # commit the transaction and close the connection
+        db_conn.commit()
+    
+    def get_distinct_person_ids(self, db_conn):
+        cursor = db_conn.execute('SELECT DISTINCT person_id FROM features')
+        # fetch all the results as a list of tuples
+        results = cursor.fetchall()
+        # extract the person_id values from the list of tuples
+        person_ids = [result[0] for result in results]
+
+        return person_ids

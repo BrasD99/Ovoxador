@@ -1,12 +1,8 @@
 import json
 import os
-
 import cv2
-import imageio
 import numpy as np
-import torch
 import shutil
-
 
 def filter_detections(detections, filter_class_id):
     filtered_classes = []
@@ -66,6 +62,7 @@ def get_cameras_config(cfg, camera_ids):
         camera_params["LAMA_MODEL_PATH"] = cfg["LAMA_MODEL_PATH"]
         camera_params["TORCHREID_MODEL_PATH"] = cfg["TORCHREID_MODEL_PATH"]
         camera_params["REIDENTIFICATION_TRESH"] = cfg["REIDENTIFICATION_TRESH"]
+        camera_params["REIDENTIFICATION_BATCH_SIZE"] = cfg["REIDENTIFICATION_BATCH_SIZE"]
         camera_params["TEXTURES_MODE"] = cfg["TEXTURES_MODE"]
 
         output[camera_id] = camera_params

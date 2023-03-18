@@ -5,6 +5,9 @@ from .detector import Detector
 from .helpers import filter_detections, print_warning
 from .tracker import Tracker
 
+import sqlite3
+import os
+
 
 class Camera:
     def __init__(self, video_file, camera_id, homography, cfg):
@@ -40,6 +43,10 @@ class Camera:
         if self.camera_id == 0:
             desc = f'Processing main camera [frames≈{frames_count}]'
 
+        # Creating temporary db to store camera data
+        db_file_name = f'tmp_{self.camera_id}.db'
+        conn = self.create_db(db_file_name)
+
         for frame in tqdm(processed_clip.iter_frames(), desc=desc):
             self.frames.append(frame)
 
@@ -48,8 +55,28 @@ class Camera:
             ball_detections = filter_detections(detections, self.classes['ball'])
             player_detections = filter_detections(detections, self.classes['player'])
 
-            self.player_tracker.predict(frame, player_detections)
+            self.player_tracker.predict(frame, player_detections, conn)
             self.ball_detections.append(ball_detections)
+        
+        self.remove_db(conn, db_file_name)
+
+    def create_db(self, file_name):
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        conn = sqlite3.connect(file_name)
+        # create a table to store the image features
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS features (
+                id INTEGER PRIMARY KEY,
+                person_id INTEGER,
+                feature BLOB
+            )
+        ''')
+        return conn
+    
+    def remove_db(self, conn, file_name):
+        conn.close()
+        os.remove(file_name)
 
     def get_player_tracks(self):
         return self.player_tracker.tracking_output

@@ -1,9 +1,7 @@
 from torchreid.data.transforms import build_transforms
-import cv2
 from PIL import Image
 import torchreid
 import torch
-import os
 from torchreid import metrics
 import torch
 
@@ -39,6 +37,28 @@ class Reidentificator:
         self.model.eval()
 
     @torch.no_grad()
+    def get_image_features(self, query_img):
+        # Convert query image to tensor and extract its feature
+        query_img = Image.fromarray(query_img.astype('uint8')).convert('RGB')
+        query_img = self.transform_te(query_img)
+        query_img = torch.unsqueeze(query_img, 0)
+        query_img = query_img.to(self.device)
+        query_feature = self._extract_features(query_img)
+        query_feature = query_feature.data.cpu()
+        return query_feature
+    
+    @torch.no_grad()
+    def get_features_v2(self, query_feature, gallery_features):
+        # Concatenate gallery features into a tensor
+        gf = torch.stack([torch.from_numpy(f) for f in gallery_features])
+
+        # Compute distance matrix between query feature and gallery features
+        distmat = metrics.compute_distance_matrix(query_feature, gf, self.dist_metric)
+
+        # Return distance matrix and query feature as a numpy array
+        return distmat.numpy()
+
+    @torch.no_grad()
     def get_features(self, query_imgs, gallery_imgs):
         qf = []
         for img in query_imgs:
@@ -61,8 +81,11 @@ class Reidentificator:
             features = features.data.cpu()
             gf.append(features)
         gf = torch.cat(gf, 0)
+
         distmat = metrics.compute_distance_matrix(qf, gf, self.dist_metric)
+
         return distmat.numpy()
+    
     def _extract_features(self, input):
         self.model.eval()
         return self.model(input)
