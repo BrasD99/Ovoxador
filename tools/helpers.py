@@ -432,25 +432,32 @@ def get_optimal_main_connections(main_connections):
     return dict(sorted(output.items()))
 
 
-def map_to_frames_output(pose_output_dict, ball_positions_dict):
-    output_frames = {}
+def get_players_for_frame(pose_output_dict, frame_id):
+    output = {}
     for player_id, inner_data in pose_output_dict.items():
         for inner_player_data in inner_data:
-            if inner_player_data['frame'] not in output_frames:
-                output_frames[inner_player_data['frame']] = []
+            if inner_player_data['frame'] == frame_id:
+                output[player_id] = inner_player_data
+    return output
 
-            ball_position = None
-            if inner_player_data['frame'] in ball_positions_dict:
-                ball_position = ball_positions_dict[inner_player_data['frame']]
 
-            output_frames[inner_player_data['frame']].append({
+def map_to_frames_output(pose_output_dict, ball_positions_dict, frames_count):
+    output_frames = {}
+
+    for frame_id in range(frames_count):
+        players_data = get_players_for_frame(pose_output_dict, frame_id + 1)
+        ball_position = ball_positions_dict.get(frame_id + 1)
+        output_frames[frame_id] = {
+            'ball_position': ball_position,
+            'players': [{
                 'id': player_id,
-                'camera_id': inner_player_data['camera_id'],
-                'pose': inner_player_data['pose'],
-                'player_position': inner_player_data['player_position'],
-                'ball_position': ball_position
-            })
-    return dict(sorted(output_frames.items()))
+                'camera_id': player_data['camera_id'],
+                'pose': player_data['pose'],
+                'position': player_data['player_position']
+            } for player_id, player_data in players_data.items()]
+        }
+
+    return output_frames
 
 
 def map_to_general_output(frames_output, cameras_positions):
@@ -498,8 +505,9 @@ def get_optimal_players_connections(aligned_arr):
     return optimal_connections
 
 
-def get_output_dict(pose_dict, ball_positions, cameras_positions):
-    output = map_to_frames_output(pose_dict, ball_positions)
+def get_output_dict(pose_dict, ball_positions, cameras_positions, main_camera):
+    frames_count = len(main_camera.frames)
+    output = map_to_frames_output(pose_dict, ball_positions, frames_count)
     output = map_to_general_output(output, cameras_positions)
     return output
 

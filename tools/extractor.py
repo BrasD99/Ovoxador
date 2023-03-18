@@ -281,7 +281,7 @@ class Extractor:
 
         poses_dict = self.export_poses_and_positions(
             cameras, optimal_connections, cameras_players, pose_estimator)
-        output = get_output_dict(poses_dict, ball_positions, cameras_locations)
+        output = get_output_dict(poses_dict, ball_positions, cameras_locations, cameras[0])
 
         # Saving bboxes
         if export_dict['boxes']:
