@@ -13,7 +13,7 @@ class YamlParser(edict):
             cfg_dict = {}
 
         if config_file is not None:
-            assert(os.path.isfile(config_file))
+            assert (os.path.isfile(config_file))
             with open(config_file, 'r') as fo:
                 yaml_ = yaml.load(fo.read(), Loader=yaml.FullLoader)
                 cfg_dict.update(yaml_)

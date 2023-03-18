@@ -1,3 +1,4 @@
+from tools.extractor import Extractor
 from tools.helpers import load_homography
 from tools.camera import Camera
 from tools.helpers import get_config, create_output_directory, get_cameras_config
@@ -5,7 +6,6 @@ from tools.texture import TextureExporter
 from tools.pose import PoseEstimator
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-from tools.extractor import Extractor
 
 cfg = get_config()
 

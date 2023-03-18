@@ -13,5 +13,3 @@ def get_logger(name='root'):
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
     return logger
-
-

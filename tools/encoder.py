@@ -2,11 +2,12 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
+
 class ImageEncoder(object):
-    def __init__(self, 
-    checkpoint_filename, 
-    input_name="images",
-    output_name="features"):
+    def __init__(self,
+                 checkpoint_filename,
+                 input_name="images",
+                 output_name="features"):
         self.session = tf.Session()
         with tf.gfile.GFile(checkpoint_filename, "rb") as file_handle:
             graph_def = tf.GraphDef()

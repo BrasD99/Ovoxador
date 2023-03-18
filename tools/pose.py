@@ -7,8 +7,9 @@ import cv2
 import numpy as np
 from PARE.pare.utils.smooth_pose import smooth_pose
 
+
 class PoseEstimator:
-    
+
     def __init__(self, cfg):
         self.pare_config = cfg['PARE_CFG']
         self.pare_ckpt = cfg['PARE_CKPT']
@@ -59,8 +60,8 @@ class PoseEstimator:
 
         self.load_pretrained_model(self.model)
         self.model.eval()
-    
-    def process(self, image, bbox = None):
+
+    def process(self, image, bbox=None):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if not bbox:
@@ -85,7 +86,7 @@ class PoseEstimator:
             pred_betas.append(output['pred_shape'])
             pred_joints3d.append(output['smpl_joints3d'])
             smpl_joints2d.append(output['smpl_joints2d'])
-            
+
             pred_verts = torch.cat(pred_verts, dim=0)
             pred_pose = torch.cat(pred_pose, dim=0)
             pred_betas = torch.cat(pred_betas, dim=0)
@@ -101,49 +102,50 @@ class PoseEstimator:
             smpl_joints2d = smpl_joints2d.cpu().numpy()
 
             pred_verts, pred_pose, pred_joints3d = smooth_pose(pred_pose, pred_betas,
-                                                                   min_cutoff=0.004, beta=1.5)
+                                                               min_cutoff=0.004, beta=1.5)
 
             output_dict = {
-                        'verts': pred_verts,
-                        'pose': pred_pose,
-                        'betas': pred_betas,
-                        'joints3d': pred_joints3d,
-                        'smpl_joints2d': smpl_joints2d
-                    }
-            
+                'verts': pred_verts,
+                'pose': pred_pose,
+                'betas': pred_betas,
+                'joints3d': pred_joints3d,
+                'smpl_joints2d': smpl_joints2d
+            }
+
             return output_dict
-        
+
     def convert_crop_coords_to_orig_img(self, bbox, keypoints, crop_size):
         cx, cy, h = bbox[:, 0], bbox[:, 1], bbox[:, 2]
         keypoints = 0.5 * crop_size * (keypoints + 1.0)
         keypoints *= h[..., None, None] / crop_size
-        keypoints[:,:,0] = (cx - h/2)[..., None] + keypoints[:,:,0]
-        keypoints[:,:,1] = (cy - h/2)[..., None] + keypoints[:,:,1]
+        keypoints[:, :, 0] = (cx - h/2)[..., None] + keypoints[:, :, 0]
+        keypoints[:, :, 1] = (cy - h/2)[..., None] + keypoints[:, :, 1]
         return keypoints
-    
+
     def convert_crop_cam_to_orig_img(self, cam, bbox, img_width, img_height):
-        cx, cy, h = bbox[:,0], bbox[:,1], bbox[:,2]
+        cx, cy, h = bbox[:, 0], bbox[:, 1], bbox[:, 2]
         hw, hh = img_width / 2., img_height / 2.
-        sx = cam[:,0] * (1. / (img_width / h))
-        sy = cam[:,0] * (1. / (img_height / h))
-        tx = ((cx - hw) / hw / sx) + cam[:,1]
-        ty = ((cy - hh) / hh / sy) + cam[:,2]
+        sx = cam[:, 0] * (1. / (img_width / h))
+        sy = cam[:, 0] * (1. / (img_height / h))
+        tx = ((cx - hw) / hw / sx) + cam[:, 1]
+        ty = ((cy - hh) / hh / sy) + cam[:, 2]
         orig_cam = np.stack([sx, sy, tx, ty]).T
         return orig_cam
-    
+
     def prepare_image(self, image, bbox):
         img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         norm_img, _, _ = get_single_image_crop_demo(
-                img,
-                bbox,
-                kp_2d=None,
-                scale=1,
-                crop_size=224)
+            img,
+            bbox,
+            kp_2d=None,
+            scale=1,
+            crop_size=224)
 
         return norm_img
-    
+
     def load_pretrained_model(self, model):
-        ckpt = torch.load(self.pare_ckpt, map_location=self.device)['state_dict']
+        ckpt = torch.load(self.pare_ckpt, map_location=self.device)[
+            'state_dict']
         pretrained_keys = ckpt.keys()
         new_state_dict = OrderedDict()
         for pk in pretrained_keys:
@@ -168,7 +170,7 @@ class PoseEstimator:
                     if model_state_dict[pk].shape != ckpt[pk].shape:
                         if pk == 'model.head.fc1.weight':
                             updated_pretrained_state_dict[pk] = torch.cat(
-                                [ckpt[pk], ckpt[pk][:,-7:]], dim=-1
+                                [ckpt[pk], ckpt[pk][:, -7:]], dim=-1
                             )
                             continue
                         else:

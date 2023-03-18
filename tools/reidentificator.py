@@ -5,28 +5,30 @@ import torch
 from torchreid import metrics
 import torch
 
+
 class Reidentificator:
     def __init__(self, cfg):
         self.device = torch.device("cpu")
         self.model = torchreid.models.build_model(
-                name='resnet50',
-                num_classes=1,
-                loss='softmax',
-                pretrained=True,
-                use_gpu = True
-            )
-        torchreid.utils.load_pretrained_weights(self.model, cfg['TORCHREID_MODEL_PATH'])
+            name='resnet50',
+            num_classes=1,
+            loss='softmax',
+            pretrained=True,
+            use_gpu=True
+        )
+        torchreid.utils.load_pretrained_weights(
+            self.model, cfg['TORCHREID_MODEL_PATH'])
         self.model = self.model.to(self.device)
         self.optimizer = torchreid.optim.build_optimizer(
-                self.model,
-                optim='adam',
-                lr=0.0003
-            )
+            self.model,
+            optim='adam',
+            lr=0.0003
+        )
         self.scheduler = torchreid.optim.build_lr_scheduler(
-                self.optimizer,
-                lr_scheduler='single_step',
-                stepsize=20
-            )
+            self.optimizer,
+            lr_scheduler='single_step',
+            stepsize=20
+        )
         _, self.transform_te = build_transforms(
             height=256, width=128,
             random_erase=False,
@@ -46,14 +48,15 @@ class Reidentificator:
         query_feature = self._extract_features(query_img)
         query_feature = query_feature.data.cpu()
         return query_feature
-    
+
     @torch.no_grad()
     def get_features_v2(self, query_feature, gallery_features):
         # Concatenate gallery features into a tensor
         gf = torch.stack([torch.from_numpy(f) for f in gallery_features])
 
         # Compute distance matrix between query feature and gallery features
-        distmat = metrics.compute_distance_matrix(query_feature, gf, self.dist_metric)
+        distmat = metrics.compute_distance_matrix(
+            query_feature, gf, self.dist_metric)
 
         # Return distance matrix and query feature as a numpy array
         return distmat.numpy()
@@ -85,7 +88,7 @@ class Reidentificator:
         distmat = metrics.compute_distance_matrix(qf, gf, self.dist_metric)
 
         return distmat.numpy()
-    
+
     def _extract_features(self, input):
         self.model.eval()
         return self.model(input)

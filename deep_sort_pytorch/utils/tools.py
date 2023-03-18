@@ -34,6 +34,7 @@ def tik_tok(func):
             return func(*args, **kwargs)
         finally:
             end_ = time()
-            print("time: {:.03f}s, fps: {:.03f}".format(end_ - start, 1 / (end_ - start)))
+            print("time: {:.03f}s, fps: {:.03f}".format(
+                end_ - start, 1 / (end_ - start)))
 
     return _time_it
