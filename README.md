@@ -26,6 +26,7 @@ The solution uses a variety of neural network models to solve the tasks:
 - [ ] Calculation of performance metrics of athletes
 - [ ] GUI refinement
 - [ ] VR/AR solution using Unity (will be moved to another repository)
+- [ ] Beautiful animated gif for README ;)
 
 💻 Testing on macOS 💻<br>
 :warning: The project is under development! :warning:
