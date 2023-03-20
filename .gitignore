@@ -1,3 +1,4 @@
 data/
 yolov8l.pt
+__pycache__
 tools/__pycache__
