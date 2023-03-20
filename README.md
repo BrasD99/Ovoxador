@@ -22,11 +22,11 @@ The solution uses a variety of neural network models to solve the tasks:
 ## To-Do List
 
 - [x] Reidentification optimization (now we are using SQLite database to store features)
-- [ ] Multithreading support to speed up the work of modules
+- [x] Beautiful animated gif for README ;)
+- [x] Multithreading support to speed up the work of modules
 - [ ] Calculation of performance metrics of athletes
 - [ ] GUI refinement
 - [ ] VR/AR solution using Unity (will be moved to another repository)
-- [ ] Beautiful animated gif for README ;)
 
 💻 Testing on macOS 💻<br>
 :warning: The project is under development! :warning:
