@@ -266,6 +266,10 @@ class Extractor:
         with open(dump_file, 'wb') as file:
             pickle.dump(data, file)
 
+    def set_progress(self, progress_var, percent):
+        if progress_var:
+            progress_var.set(percent)
+
     def export_all(
             self,
             cameras,
@@ -274,7 +278,8 @@ class Extractor:
             texture_exporter,
             pose_estimator,
             export_dict,
-            output_src_dict):
+            output_src_dict,
+            progress_var=None):
 
         ball_positions = get_ball_positions(cameras, homographies)
         cameras_players = get_cameras_players(cameras, homographies)
@@ -286,28 +291,43 @@ class Extractor:
             cameras, optimal_connections, cameras_players, pose_estimator)
         output = get_output_dict(poses_dict, ball_positions, cameras_locations, cameras[0])
 
+        self.set_progress(progress_var=progress_var, percent=12.5)
+
         # Saving bboxes
         if export_dict['boxes']:
             self.export_bboxes(cameras, output_src_dict['analytics_path'])
+        self.set_progress(progress_var=progress_var, percent=25)
+
         # Saving centers
         if export_dict['centers']:
             self.export_centers(
                 cameras, homographies, cameras_players, output_src_dict['analytics_path'])
+        self.set_progress(progress_var=progress_var, percent=37.5)
+
         # Creating dump
         if export_dict['dump']:
             self.create_dump(output, output_src_dict['dump_file'])
+        self.set_progress(progress_var=progress_var, percent=50)
+        
         # Saving players textures
         if export_dict['players_texture']:
             self.export_players_textures_v2(
                 cameras, optimal_connections, texture_exporter, output_src_dict['textures_path'])
+        self.set_progress(progress_var=progress_var, percent=62.5)
+
         # Saving pitch texture
         if export_dict['pitch_texture']:
             self.export_pitch(cameras[0], homographies[0],
                               output_src_dict['textures_path'])
+        self.set_progress(progress_var=progress_var, percent=75)
+
         # Saving frames
         if export_dict['frames']:
             self.export_frames(cameras, output_src_dict['frames_path'])
+        self.set_progress(progress_var=progress_var, percent=87.5)
+
         # Saving homography matrixes
         if export_dict['homography']:
             self.export_homography_array(
                 homographies, output_src_dict['homographies_path'])
+        self.set_progress(progress_var=progress_var, percent=100)

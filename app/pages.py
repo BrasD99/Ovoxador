@@ -10,9 +10,7 @@ import os
 from tools.helpers import (
     get_config,
     get_cameras_config,
-    get_cameras_players,
-    get_connections,
-    get_players_images)
+    create_output_directory)
 from tools.camera import Camera
 from tools.extractor import Extractor, TextureExporter
 from tools.pose import PoseEstimator
@@ -60,21 +58,21 @@ class UploadPage(tk.Frame):
                                       command=lambda: self.on_confirm_click(controller))
 
         single_video_button = ttk.Button(
-            self, text="Upload Single Video", command=self.upload_single_video)
+            self, text="Upload Main camera Video", command=self.upload_single_video)
         single_video_button.grid(row=0, column=0, columnspan=2, sticky='nesw')
 
         self.single_video_label = tk.Label(
-            self, text="Single video not uploaded")
+            self, text="Main camera video not uploaded")
         self.single_video_label.grid(
             row=1, column=0, columnspan=2, sticky='nesw')
 
         multiple_videos_button = ttk.Button(
-            self, text="Upload Multiple Videos", command=self.upload_multiple_videos)
+            self, text="Upload Other cameras Videos", command=self.upload_multiple_videos)
         multiple_videos_button.grid(
             row=2, column=0, columnspan=2, sticky='nesw')
 
         self.multiple_videos_label = tk.Label(
-            self, text="Multiple videos not uploaded")
+            self, text="Other cameras videos not uploaded")
         self.multiple_videos_label.grid(
             row=3, column=0, columnspan=2, sticky='nesw')
 
@@ -447,10 +445,11 @@ class Processor(tk.Frame):
         self.multiple_video_path = multiple_video_path
 
     def start(self, progress_var):
-        homographies, camera_locations = self.get_homographies_and_cameras()
+        homographies, cameras_locations = self.get_homographies_and_cameras()
+        cameras_locations = [cameras_location.tolist() for cameras_location in cameras_locations]
         video_paths = self.get_video_paths()
-        directories = self.prepare_project_path(
-            self.config['OUTPUT_FOLDER'], video_paths)
+        output_src_dict = create_output_directory(self.config['OUTPUT_FOLDER'], video_paths)
+
         cameras = [
             Camera(
                 video_file=video_paths[i],
@@ -461,43 +460,34 @@ class Processor(tk.Frame):
             for i in range(len(video_paths))
         ]
 
-        for camera in cameras:
+        for i, camera in enumerate(cameras):
             camera.process()
+            percent = (i + 1) * (100 / len(cameras))
+            progress_var.set(percent)
 
         extractor = Extractor(cfg=self.config)
+        texture_exporter = TextureExporter(cfg=self.config)
+        pose_estimator = PoseEstimator(cfg=self.config)
 
-        extractor.export_bboxes(cameras, directories['analytics_path'])
+        export_dict = {
+            'boxes': True,
+            'centers': True,
+            'dump': True,
+            'frames': True,
+            'homography': True,
+            'pitch_texture': True,
+            'players_texture': True
+        }
 
-        cameras_players = get_cameras_players(cameras, homographies)
-        main_camera_players = cameras_players[0]
-
-        connections = get_connections(
-            cameras,
-            main_camera_players,
-            cameras_players,
-            extractor,
-            directories['analytics_path'])
-
-        texture_exporter = TextureExporter(self.config)
-        estimator = PoseEstimator(self.config)
-        # Saving players textures
-        extractor.export_players_textures(
-            cameras, connections, texture_exporter, directories['textures_path'])
-        players_images = get_players_images(cameras, connections)
-        for player_id in players_images:
-            images = players_images[player_id]
-            for image in images:
-                pose_output = estimator.process(image)
-                print(pose_output)
-
-        # Saving pitch texture
-        extractor.export_pitch(
-            cameras[0], homographies[0], directories['textures_path'])
-        # Saving frames
-        extractor.export_frames(cameras, directories['frames_path'])
-        # Saving homography matrixes
-        extractor.export_homography_array(
-            homographies, directories['homographies_path'])
+        extractor.export_all(
+            cameras=cameras,
+            cameras_locations=cameras_locations,
+            homographies=homographies,
+            texture_exporter=texture_exporter,
+            pose_estimator=pose_estimator,
+            export_dict=export_dict,
+            output_src_dict=output_src_dict,
+            progress_var=progress_var)
 
     def merge_configs(self, camera_config):
         for key in self.config.keys():
@@ -507,38 +497,6 @@ class Processor(tk.Frame):
 
     def get_video_paths(self):
         return [self.single_video_path] + list(self.multiple_video_path)
-
-    def prepare_project_path(self, output_path, videos):
-        if os.path.exists(output_path):
-            shutil.rmtree(output_path)
-        videos_path = os.path.join(output_path, 'videos')
-        frames_path = os.path.join(output_path, 'frames')
-        textures_path = os.path.join(output_path, 'textures')
-        homographies_path = os.path.join(output_path, 'homography')
-        analytics_path = os.path.join(output_path, 'analytics')
-
-        path_arr = [videos_path, frames_path, textures_path,
-                    homographies_path, analytics_path]
-
-        for i in range(len(videos)):
-            frame_path = os.path.join(frames_path, f'camera_{i}')
-            path_arr.append(frame_path)
-
-        for path in path_arr:
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-        for i, video_path in enumerate(videos):
-            _, ext = os.path.splitext(video_path)
-            shutil.copy(video_path, f'{videos_path}/camera_{i}{ext}')
-
-        return {
-            'videos_path': videos_path,
-            'frames_path': frames_path,
-            'textures_path': textures_path,
-            'homographies_path': homographies_path,
-            'analytics_path': analytics_path
-        }
 
     def get_homographies_and_cameras(self):
         homography_arr = []
