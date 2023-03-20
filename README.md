@@ -5,9 +5,7 @@
 <h1 align="center">Ovoxador</h1>
 
 <p>
-  Welcome to <strong>Ovoxador</strong>, a cutting-edge system for training athletes like never before. Our solution leverages the power of computer vision and machine learning to process video recordings of team sport games, providing coaches and athletes with unprecedented insights into their performance.<br>
-  Using a combination of neural network models, our solution can detect people and sports equipment on video frames, track players, reidentify them on various tracks, get their texture, determine their pose, and acquire the field texture. These features are then presented in virtual and augmented reality, giving coaches and athletes a 360-degree view of the game and enabling them to analyze their performance in real-time.<br>
-  Whether you are a professional athlete striving for excellence or a coach looking to improve your team's performance, <strong>Ovoxador</strong> can help you achieve your goals. We invite you to explore our system and discover the many ways it can transform the way you train and play.
+  Welcome to <strong>Ovoxador</strong>, a cutting-edge system for training athletes like never before. Our solution leverages the power of computer vision and machine learning to process video recordings of team sport games, providing coaches and athletes with unprecedented insights into their performance.Using a combination of neural network models, our solution can detect people and sports equipment on video frames, track players, reidentify them on various tracks, get their texture, determine their pose, and acquire the field texture. These features are then presented in virtual and augmented reality, giving coaches and athletes a 360-degree view of the game and enabling them to analyze their performance in real-time. Whether you are a professional athlete striving for excellence or a coach looking to improve your team's performance, <strong>Ovoxador</strong> can help you achieve your goals. We invite you to explore our system and discover the many ways it can transform the way you train and play.
 </p>
 
 ## Neural Network Models
