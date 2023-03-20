@@ -10,14 +10,14 @@
 
 ## Neural Network Models
 
-The solution uses a variety of neural network models to solve the tasks:
+<strong>Ovoxador</strong> harnesses the power of several state-of-the-art neural network models to tackle various tasks and extract valuable insights from video recordings of team sport games. These models include:
 
-- [**YOLOv8**](https://github.com/ultralytics/ultralytics) - detector for detecting people and sports equipment on video frames,
-- [**DeepSort**](https://github.com/ZQPei/deep_sort_pytorch) - tracker for detecting players on video frames,
-- [**TorchReId**](https://github.com/KaiyangZhou/deep-person-reid) - reidentification of players on various tracks,
-- [**DensePose**](https://github.com/facebookresearch/detectron2/tree/main/projects/DensePose) - getting the texture of the player on the video frame,
-- [**PARE**](https://github.com/mkocabas/PARE) - determine the pose of the player on the video frame,
-- [**LaMa**](https://github.com/saic-mdal/lama) - image processing and field texture acquisition.
+- [**YOLOv8**](https://github.com/ultralytics/ultralytics) - A powerful detector that can identify people and sports equipment on video frames with high accuracy.
+- [**DeepSort**](https://github.com/ZQPei/deep_sort_pytorch) - A robust tracker that can follow players on video frames and maintain their identities across different camera angles.
+- [**TorchReId**](https://github.com/KaiyangZhou/deep-person-reid) - A cutting-edge reidentification model that can recognize players across various tracks and ensure accurate tracking.
+- [**DensePose**](https://github.com/facebookresearch/detectron2/tree/main/projects/DensePose) - A sophisticated model that can extract the texture of players on video frames.
+- [**PARE**](https://github.com/mkocabas/PARE) - A model that can determine the pose of players on video frames, allowing for detailed analysis of their body language and postures.
+- [**LaMa**](https://github.com/saic-mdal/lama) - An advanced image processing model that can acquire field texture.
 
 ## To-Do List
 
