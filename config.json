@@ -4,12 +4,12 @@
     "DENSEPOSE_WEIGHTS_URL": "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl",
     "LAMA_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/regular-lama",
     "TORCHREID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/Ovoxador/data/torchreid/model.pth.tar-60",
-    "REIDENTIFICATION_TRESH": 300,
+    "REIDENTIFICATION_TRESH": 200,
     "REIDENTIFICATION_BATCH_SIZE": 30,
-    "TEXTURES_MODE": 1,
+    "TEXTURES_MODE": 0,
     "PARE_CFG": "data/pare/checkpoints/pare_w_3dpw_config.yaml",
     "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
-    "MAX_VIDEO_LENGTH": 1,
+    "MAX_VIDEO_LENGTH": 2,
     "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
     "DEFAULT_CAMERA_PARAMS": {
         "CAMERA_FPS": 24,
@@ -20,17 +20,17 @@
     "CAMERA_OVERRIDEN_PARAMS": {
         "0": {
             "PLAYER_DETECTION_TRESH": 0.7,
-            "BALL_DETECTION_TRESH": 0.2,
+            "BALL_DETECTION_TRESH": 0.1,
             "MAX_BBOX_OVERLAP": 0.4
         },
         "1": {
-            "PLAYER_DETECTION_TRESH": 0.8,
-            "BALL_DETECTION_TRESH": 0.2,
+            "PLAYER_DETECTION_TRESH": 0.5,
+            "BALL_DETECTION_TRESH": 0.1,
             "MAX_BBOX_OVERLAP": 0.8
         },
         "2": {
-            "PLAYER_DETECTION_TRESH": 0.8,
-            "BALL_DETECTION_TRESH": 0.2,
+            "PLAYER_DETECTION_TRESH": 0.5,
+            "BALL_DETECTION_TRESH": 0.1,
             "MAX_BBOX_OVERLAP": 0.8
         }
     }

@@ -178,35 +178,38 @@ class Extractor:
                             transformed_output)
 
     def export_players_textures_v2(self, cameras, connections, texture_exporter, textures_path):
-        for main_player_id in tqdm(connections.keys(), desc='Exporting images for players...'):
-            player_texture = None
-            if self.cfg['TEXTURES_MODE']:
-                for inner_connection in connections[main_player_id]:
-                    other_camera_id = inner_connection['camera_id']
-                    other_player_id = inner_connection['id']
-                    other_player_images = get_players_images_v2(
-                        cameras[other_camera_id], other_player_id)
-                    main_player_images = get_players_images_v2(
-                        cameras[0], main_player_id)
-                    player_images = other_player_images + main_player_images
-                    for image in tqdm(player_images, desc=f'Combining textures for player {main_player_id}', leave=True):
-                        output = texture_exporter.execute(image)[0]
-                        if 'pred_densepose' in output:
-                            texture = create_iuv(output, image)
-                            if player_texture is None or not player_texture.any():
-                                player_texture = texture
-                            else:
-                                player_texture = cv2.addWeighted(
-                                    player_texture, 0.5, texture, 0.5, 0)
-            else:
-                player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for main_player_id in tqdm(connections.keys(), desc='Exporting images for players...'):
+                futures.append(executor.submit(self.export_player_texture, main_player_id, cameras, connections, texture_exporter, textures_path))
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc='Waiting for texture export threads to complete...'):
+                future.result()
+    
+    def export_player_texture(self, main_player_id, cameras, connections, texture_exporter, textures_path):
+        player_texture = None
+        if self.cfg['TEXTURES_MODE']:
+            for inner_connection in connections[main_player_id]:
+                other_camera_id = inner_connection['camera_id']
+                other_player_id = inner_connection['id']
+                other_player_images = get_players_images_v2(cameras[other_camera_id], other_player_id)
+                main_player_images = get_players_images_v2(cameras[0], main_player_id)
+                player_images = other_player_images + main_player_images
+                for image in tqdm(player_images, desc=f'Combining textures for player {main_player_id}', leave=True):
+                    output = texture_exporter.execute(image)[0]
+                    if 'pred_densepose' in output:
+                        texture = create_iuv(output, image)
+                        if player_texture is None or not player_texture.any():
+                            player_texture = texture
+                        else:
+                            player_texture = cv2.addWeighted(player_texture, 0.5, texture, 0.5, 0)
+        else:
+            player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
-            # Bug fix, if we havent found detections on small video len
-            if player_texture is None or not player_texture.any():
-                player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
+        # Bug fix, if we havent found detections on small video len
+        if player_texture is None or not player_texture.any():
+            player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
-            imageio.imwrite(
-                f'{textures_path}/player_{main_player_id}.png', player_texture)
+        imageio.imwrite(f'{textures_path}/player_{main_player_id}.png', player_texture)
 
     def export_poses_and_positions(self, cameras, connections, cameras_players, pose_estimator):
         output = {}

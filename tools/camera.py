@@ -39,7 +39,7 @@ class Camera:
         if self.max_video_len > 0:
             processed_clip = processed_clip.subclip(0, self.max_video_len)
 
-        frames_count = int(processed_clip.fps * processed_clip.duration) + 1
+        frames_count = int(processed_clip.fps * processed_clip.duration)
 
         desc = f'Processing camera №{self.camera_id} [frames≈{frames_count}]'
         if self.camera_id == 0:

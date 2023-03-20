@@ -65,7 +65,7 @@ class Tracker:
 
         self.tracker.predict()
         self.tracker.update(detections)
-        self.update_tracker_output(image, self.reid_tresh, db_conn)
+        self.update_tracker_output_v2(image, self.reid_tresh, db_conn)
 
     def check_point(self, x, y):
         center = np.array([x, y])
@@ -73,9 +73,88 @@ class Tracker:
         point = cv2.perspectiveTransform(point, self.homography)[0][0]
         return (0 <= point[0] <= self.m_width) and (0 <= point[1] <= self.m_height)
 
+
+    def update_tracker_output_v2(self, frame, tresh, db_conn):
+        self.frame_num += 1
+        buffer = {}
+
+        # Getting previous ids
+        db_person_ids = self.get_distinct_person_ids(db_conn)
+
+        # Process tracks
+        for track in self.tracker.tracks:
+            track_id = track.track_id
+            box = track.to_tlbr().astype(int)
+            xmin, ymin, xmax, ymax = box
+
+            if self.check_point(xmin + (xmin - xmax) // 2, ymax):
+                image = self.crop_image(xmin, ymin, xmax, ymax, frame)
+                if image.size != 0:
+                    image_features = self.reidentificator.get_image_features(image)
+                    buffer[track_id] = {
+                        'parent_track_id': None,
+                        'connections': None,
+                        'features': image_features,
+                        'box': box
+                    }
+                    # Check if we have connection with another track
+                    parent_track_id = self.find_parent_track(track_id)
+                    # If we found parent track from dictionary of connections
+                    if parent_track_id:
+                        buffer[track_id]['parent_track_id'] = parent_track_id
+                    # There is no any connection
+                    else:
+                        # Getting distances with previous tracks' images
+                        buffer[track_id]['connections'] = self.find_distances(tresh, db_conn, image_features, db_person_ids)
+
+        # Process found parent tracks
+        tracks = []
+        blocked_parent_track_ids = []
+        for track_id, value in buffer.items():
+            if value['parent_track_id'] is not None:
+                parent_track_id = value['parent_track_id']
+                image_features = value['features']
+                box = value['box']
+                blocked_parent_track_ids.append(parent_track_id)
+                tracks.append({'id': parent_track_id, 'box': box})
+                self.insert_feature(parent_track_id, image_features, db_conn)
+
+        # Process optimal connections
+        results = {k: v for k, v in buffer.items() if v['parent_track_id'] is None}
+        person_ids = set(db_person_ids) - set(blocked_parent_track_ids)
+        blocked_track_ids = []
+        for person_id in person_ids:
+            person_id_connections = {}
+            for track_id, value in results.items():
+                if track_id not in blocked_track_ids and person_id in value['connections']:
+                    person_id_connections[track_id] = value['connections'][person_id]
+            if person_id_connections:
+                track_id = min(person_id_connections, key=person_id_connections.get)
+                blocked_track_ids.append(track_id)
+                tracks.append({'id': person_id, 'box': results[track_id]['box']})
+                self.track_bundles[person_id].append(track_id)
+                self.insert_feature(person_id, results[track_id]['features'], db_conn)
+
+        # Process other tracks
+        for track_id, value in results.items():
+            if track_id not in blocked_track_ids:
+                tracks.append({'id': track_id, 'box': value['box']})
+                self.track_bundles[track_id] = []
+                self.insert_feature(track_id, value['features'], db_conn)
+
+        # Append data to tracking output
+        self.tracking_output.append({
+            'frame_num': self.frame_num,
+            'tracks': tracks
+        })
+
+        self.first_frame = False
+
+
     def update_tracker_output(self, frame, tresh, db_conn):
         self.frame_num += 1
         tracks = []
+
         for track in self.tracker.tracks:
             # Get the track ID
             track_id = track.track_id
@@ -127,7 +206,7 @@ class Tracker:
 
     def find_parent_track(self, track_id):
         for key, values in self.track_bundles.items():
-            if track_id in values:
+            if track_id == key or track_id in values:
                 return key
         return None
 
@@ -158,8 +237,8 @@ class Tracker:
 
         return image[ymin:ymax, xmin:xmax]
 
-    def find_previous_track(self, tresh, db_conn, image_features):
-        db_person_ids = self.get_distinct_person_ids(db_conn)
+
+    def find_distances(self, tresh, db_conn, image_features, db_person_ids):
         tmp_features_dict = {}
 
         for person_id in db_person_ids:
@@ -178,7 +257,14 @@ class Tracker:
                             tmp_features_dict[person_id] = min_feature
                     else:
                         tmp_features_dict[person_id] = min_feature
+        
+        return tmp_features_dict
+    
 
+    def find_previous_track(self, tresh, db_conn, image_features):
+        db_person_ids = self.get_distinct_person_ids(db_conn)
+        tmp_features_dict = self.find_distances(tresh, db_conn, image_features, db_person_ids)
+        
         if tmp_features_dict:
             return min(tmp_features_dict, key=tmp_features_dict.get)
 
