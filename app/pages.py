@@ -29,7 +29,7 @@ class UploadPage(tk.Frame):
     def upload_single_video(self):
         self.single_video = filedialog.askopenfilename(
             title="Choose a video", filetypes=[("Video Files", "*.mov")])
-        self.single_video_label.config(text="Single video uploaded")
+        self.single_video_label.config(text="Main camera's video uploaded")
         self.single_video_label.config(fg="green")
         self.single_video_uploaded = True
         self.check_uploaded()
@@ -37,7 +37,7 @@ class UploadPage(tk.Frame):
     def upload_multiple_videos(self):
         self.multiple_videos = filedialog.askopenfilenames(
             title="Choose videos", filetypes=[("Video Files", "*.mov")])
-        self.multiple_videos_label.config(text="Multiple videos uploaded")
+        self.multiple_videos_label.config(text="Other cameras' videos uploaded")
         self.multiple_videos_label.config(fg="green")
         self.multiple_videos_uploaded = True
         self.check_uploaded()
@@ -58,21 +58,21 @@ class UploadPage(tk.Frame):
                                       command=lambda: self.on_confirm_click(controller))
 
         single_video_button = ttk.Button(
-            self, text="Upload Main camera Video", command=self.upload_single_video)
+            self, text="Upload main camera's video", command=self.upload_single_video)
         single_video_button.grid(row=0, column=0, columnspan=2, sticky='nesw')
 
         self.single_video_label = tk.Label(
-            self, text="Main camera video not uploaded")
+            self, text="Main camera's video not uploaded")
         self.single_video_label.grid(
             row=1, column=0, columnspan=2, sticky='nesw')
 
         multiple_videos_button = ttk.Button(
-            self, text="Upload Other cameras Videos", command=self.upload_multiple_videos)
+            self, text="Upload other cameras' videos", command=self.upload_multiple_videos)
         multiple_videos_button.grid(
             row=2, column=0, columnspan=2, sticky='nesw')
 
         self.multiple_videos_label = tk.Label(
-            self, text="Other cameras videos not uploaded")
+            self, text="Other cameras' videos not uploaded")
         self.multiple_videos_label.grid(
             row=3, column=0, columnspan=2, sticky='nesw')
 

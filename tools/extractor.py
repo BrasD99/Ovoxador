@@ -11,15 +11,18 @@ from .helpers import (box_with_max_score,
                       get_cameras_players,
                       get_aligned_players,
                       get_optimal_players_connections,
-                      get_output_dict)
+                      get_output_dict,
+                      split_dict,
+                      CustomEncoder)
 import numpy as np
 import os
 import concurrent.futures
 import cv2
-import copy
+import json
 from tqdm import tqdm
 import imageio
-import pickle
+import copy
+from UVTextureConverter import Atlas2Normal
 
 
 class Extractor:
@@ -188,20 +191,26 @@ class Extractor:
     def export_player_texture(self, main_player_id, cameras, connections, texture_exporter, textures_path):
         player_texture = None
         if self.cfg['TEXTURES_MODE']:
+            # Getting main player's images
+            main_player_images = get_players_images_v2(cameras[0], main_player_id)
+            # Getting only specific images
+            player_images = main_player_images[::self.cfg['TEXTURES_FREQ']]
+
+            # Getting player's images from connections
             for inner_connection in connections[main_player_id]:
                 other_camera_id = inner_connection['camera_id']
                 other_player_id = inner_connection['id']
                 other_player_images = get_players_images_v2(cameras[other_camera_id], other_player_id)
-                main_player_images = get_players_images_v2(cameras[0], main_player_id)
-                player_images = other_player_images + main_player_images
-                for image in tqdm(player_images, desc=f'Combining textures for player {main_player_id}', leave=True):
-                    output = texture_exporter.execute(image)[0]
-                    if 'pred_densepose' in output:
-                        texture = create_iuv(output, image)
-                        if player_texture is None or not player_texture.any():
-                            player_texture = texture
-                        else:
-                            player_texture = cv2.addWeighted(player_texture, 0.5, texture, 0.5, 0)
+                player_images += other_player_images[::self.cfg['TEXTURES_FREQ']]
+            
+            for image in tqdm(player_images, desc=f'Combining textures for player {main_player_id}', leave=True):
+                output = texture_exporter.execute(image)[0]
+                if 'pred_densepose' in output:
+                    texture = create_iuv(output, image)
+                    if player_texture is None or not player_texture.any():
+                        player_texture = texture
+                    else:
+                        player_texture = cv2.addWeighted(player_texture, 0.5, texture, 0.5, 0)
         else:
             player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
@@ -209,7 +218,14 @@ class Extractor:
         if player_texture is None or not player_texture.any():
             player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
 
+        player_texture = self.convert_to_normal(player_texture)
         imageio.imwrite(f'{textures_path}/player_{main_player_id}.png', player_texture)
+
+    def convert_to_normal(self, texture):
+        atlas_tex_stack = Atlas2Normal.split_atlas_tex(texture)
+        converter = Atlas2Normal(atlas_size=200, normal_size=512)
+        normal_tex = converter.convert(atlas_tex_stack)
+        return normal_tex
 
     def export_poses_and_positions(self, cameras, connections, cameras_players, pose_estimator):
         output = {}
@@ -261,10 +277,18 @@ class Extractor:
 
             imageio.imwrite(
                 f'{textures_path}/player_{player_id}.png', player_texture)
+            
+    def create_output_dump(self, data, n, dump_folder):
+        frames_arr = split_dict(data['frames'], n)
+        for i, frames_dict in enumerate(frames_arr):
+            temp_output = copy.deepcopy(data)
+            temp_output['frames'] = frames_dict
+            self.create_dump(temp_output, os.path.join(dump_folder, f'{i}.json'))
 
     def create_dump(self, data, dump_file):
         with open(dump_file, 'wb') as file:
-            pickle.dump(data, file)
+            data = json.dumps(data, cls=CustomEncoder).encode('utf-8')
+            file.write(data)
 
     def set_progress(self, progress_var, percent):
         if progress_var:
@@ -283,6 +307,8 @@ class Extractor:
 
         ball_positions = get_ball_positions(cameras, homographies)
         cameras_players = get_cameras_players(cameras, homographies)
+
+        self.create_dump(cameras_players, '/Users/brasd99/Desktop/Dissertation/outputs/project/dump/cameras.json')
 
         aligned_arr = get_aligned_players(cameras_players)
         optimal_connections = get_optimal_players_connections(aligned_arr)
@@ -306,7 +332,7 @@ class Extractor:
 
         # Creating dump
         if export_dict['dump']:
-            self.create_dump(output, output_src_dict['dump_file'])
+            self.create_output_dump(output, self.cfg['OUTPUT_FRAMES_SPLIT'], output_src_dict['dump_folder'])
         self.set_progress(progress_var=progress_var, percent=50)
         
         # Saving players textures
