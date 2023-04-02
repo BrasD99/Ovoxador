@@ -23,6 +23,7 @@ from tqdm import tqdm
 import imageio
 import copy
 from UVTextureConverter import Atlas2Normal
+import matplotlib.pyplot as plt
 
 
 class Extractor:
@@ -277,6 +278,15 @@ class Extractor:
 
             imageio.imwrite(
                 f'{textures_path}/player_{player_id}.png', player_texture)
+            
+    def create_heatmap(self, coordinates, output_file, width = 1470, height = 827, bin_size = 50):
+        x = []
+        y = []
+        for coordinate in coordinates:
+            x.append(coordinate[1])
+            y.append(coordinate[0])
+        plt.hist2d(x, y, bins=[np.arange(0, width, bin_size), np.arange(0, height, bin_size)])
+        plt.savefig(output_file)
             
     def create_output_dump(self, data, n, dump_folder):
         frames_arr = split_dict(data['frames'], n)

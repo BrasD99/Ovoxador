@@ -76,6 +76,14 @@ class Camera:
                 feature BLOB
             )
         ''')
+        # create a table to store the images for analytics
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS images (
+                id INTEGER PRIMARY KEY,
+                person_id INTEGER,
+                image BLOB
+            )
+        ''')
         return conn
 
     def remove_db(self, conn, file_name):

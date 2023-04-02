@@ -6,68 +6,11 @@ from tools.texture import TextureExporter
 from tools.pose import PoseEstimator
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import json
-from scipy.optimize import linear_sum_assignment
-import numpy as np
-
-f = open('/Users/brasd99/Desktop/Dissertation/outputs/project/dump/cameras.json')
-cameras_players = json.load(f)
-f.close()
-
-# Define a function to compute the distance between player positions
-def distance(x1, y1, x2, y2):
-    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
-
-# Define a function to perform data association between two cameras
-def associate_players(cam1, cam2):
-    # Create a cost matrix of distances between player positions
-    cost_matrix = np.zeros((len(cam1['h_centers']), len(cam2['h_centers'])))
-    for i in range(len(cam1['h_centers'])):
-        for j in range(len(cam2['h_centers'])):
-            cost_matrix[i, j] = distance(cam1['h_centers'][i][0], cam1['h_centers'][i][1],
-                                          cam2['h_centers'][j][0], cam2['h_centers'][j][1])
-
-    # Use the Hungarian algorithm to find the best match between players
-    row_indices, col_indices = linear_sum_assignment(cost_matrix)
-
-    # Create a list of matched player IDs
-    matched_ids = []
-    for i, j in zip(row_indices, col_indices):
-        # Only consider matches with a low enough cost (distance)
-        if cost_matrix[i, j] < MAX_DISTANCE:
-            # Add the matched player IDs to the list
-            matched_ids.append((cam1['id'], cam1['frame_ids'][i], cam2['id'], cam2['frame_ids'][j]))
-
-    return matched_ids
 
 
-# Define a maximum distance beyond which two player positions are considered unmatched
-MAX_DISTANCE = 400
-
-# Loop through all pairs of cameras
-for i in range(len(cameras_players)):
-    for j in range(i+1, len(cameras_players)):
-        # Get the players from the two cameras
-        cam1 = cameras_players[i]
-        cam2 = cameras_players[j]
-
-        # Create a list of matched player IDs
-        matched_ids = []
-
-        # Loop through all pairs of players from cam1 and cam2
-        for k in range(len(cam1)):
-            for l in range(len(cam2)):
-                # Perform data association between the pairs of players
-                matches = associate_players(cam1[k], cam2[l])
-
-                # Add the matched player IDs to the list
-                matched_ids.extend(matches)
-
-        # Print the matched player IDs for the two cameras
-        print(f"Matches between cameras {cam1['id']} and {cam2['id']}: {matched_ids}")
-
-
-
+#f = open('/Users/brasd99/Desktop/Dissertation/outputs/project/dump/cameras.json')
+#cameras_players = json.load(f)
+#f.close()
 
 cfg = get_config()
 
@@ -87,7 +30,7 @@ tr_path = '/Users/brasd99/Desktop/Dissertation/Ovoxador/data/videos/camera_2.mov
 
 videos = [main_path, tl_path, tr_path]
 
-output_path = '/Users/brasd99/Desktop/Dissertation/outputs/project'
+output_path = '/Users/brasd99/Desktop/Dissertation/outputs/project2'
 
 output_src_dict = create_output_directory(output_path, videos)
 

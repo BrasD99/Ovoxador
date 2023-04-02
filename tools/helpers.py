@@ -68,8 +68,6 @@ def get_cameras_config(cfg, camera_ids):
         camera_params["DENSEPOSE_WEIGHTS_URL"] = cfg["DENSEPOSE_WEIGHTS_URL"]
         camera_params["LAMA_MODEL_PATH"] = cfg["LAMA_MODEL_PATH"]
         camera_params["TORCHREID_MODEL_PATH"] = cfg["TORCHREID_MODEL_PATH"]
-        camera_params["REIDENTIFICATION_TRESH"] = cfg["REIDENTIFICATION_TRESH"]
-        camera_params["REIDENTIFICATION_BATCH_SIZE"] = cfg["REIDENTIFICATION_BATCH_SIZE"]
         camera_params["TEXTURES_MODE"] = cfg["TEXTURES_MODE"]
         camera_params["TEXTURES_FREQ"] = cfg["TEXTURES_FREQ"]
         camera_params["OUTPUT_FRAMES_SPLIT"] = cfg["OUTPUT_FRAMES_SPLIT"]
@@ -536,9 +534,11 @@ def create_output_directory(output_path, videos):
     textures_path = os.path.join(output_path, 'textures')
     homographies_path = os.path.join(output_path, 'homography')
     analytics_path = os.path.join(output_path, 'analytics')
+    heatmaps_path = os.path.join(output_path, 'heatmaps')
     dump_folder = os.path.join(output_path, 'dump')
     path_arr = [videos_path, frames_path, textures_path,
-                homographies_path, analytics_path, dump_folder]
+                homographies_path, analytics_path, heatmaps_path, 
+                dump_folder]
     create_directories(path_arr, videos, frames_path, videos_path)
     return {
         'videos_path': videos_path,
@@ -546,6 +546,7 @@ def create_output_directory(output_path, videos):
         'textures_path': textures_path,
         'homographies_path': homographies_path,
         'analytics_path': analytics_path,
+        'heatmaps_path': heatmaps_path,
         'dump_folder': dump_folder
     }
 

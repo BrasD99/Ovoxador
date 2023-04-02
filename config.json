@@ -4,8 +4,6 @@
     "DENSEPOSE_WEIGHTS_URL": "https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_50_FPN_s1x/165712039/model_final_162be9.pkl",
     "LAMA_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/regular-lama",
     "TORCHREID_MODEL_PATH": "/Users/brasd99/Desktop/Dissertation/Ovoxador/data/torchreid/model.pth.tar-60",
-    "REIDENTIFICATION_TRESH": 200,
-    "REIDENTIFICATION_BATCH_SIZE": 30,
     "TEXTURES_MODE": 1,
     "TEXTURES_FREQ": 5,
     "OUTPUT_FRAMES_SPLIT": 20,
@@ -17,11 +15,16 @@
         "CAMERA_FPS": 5,
         "PLAYER_DETECTION_TRESH": 0.8,
         "BALL_DETECTION_TRESH": 0.2,
-        "MAX_BBOX_OVERLAP": 0.8
+        "MAX_BBOX_OVERLAP": 0.8,
+        "REIDENTIFICATION_TRESH": 200,
+        "REIDENTIFICATION_BATCH_SIZE": 30,
+        "BOX_SIZE_TRESHTOLD": 1.0,
+        "MIN_BOX_WIDTH": 30,
+        "BOX_ANALYTICS_ENABLED": 1
     },
     "CAMERA_OVERRIDEN_PARAMS": {
         "0": {
-            "PLAYER_DETECTION_TRESH": 0.7,
+            "PLAYER_DETECTION_TRESH": 0.75,
             "BALL_DETECTION_TRESH": 0.1,
             "MAX_BBOX_OVERLAP": 0.4
         },

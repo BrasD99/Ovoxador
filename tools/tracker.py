@@ -34,6 +34,9 @@ class Tracker:
         self.track_ids = []
         self.reid_tresh = cfg['REIDENTIFICATION_TRESH']
         self.reid_batch_size = cfg['REIDENTIFICATION_BATCH_SIZE']
+        self.min_box_size = cfg['BOX_SIZE_TRESHTOLD']
+        self.min_box_width = cfg['MIN_BOX_WIDTH']
+        self.box_analytics_enabled = cfg['BOX_ANALYTICS_ENABLED']
         self.track_bundles = {}
         self.first_frame = True
         self.homography = homography
@@ -87,7 +90,7 @@ class Tracker:
             box = track.to_tlbr().astype(int)
             xmin, ymin, xmax, ymax = box
 
-            if self.check_point(xmin + (xmin - xmax) // 2, ymax):
+            if self.check_point(xmin + (xmin - xmax) // 2, ymax) and self.is_valid_bbox(xmin, ymin, xmax, ymax):
                 image = self.crop_image(xmin, ymin, xmax, ymax, frame)
                 if image.size != 0:
                     image_features = self.reidentificator.get_image_features(image)
@@ -148,8 +151,38 @@ class Tracker:
             'tracks': tracks
         })
 
+        if self.box_analytics_enabled:
+            self.process_box_analytics(tracks, frame, db_conn)
+
         self.first_frame = False
 
+    def process_box_analytics(self, tracks, frame, db_conn):
+        for track in tracks:
+            xmin, ymin, xmax, ymax = track['box']
+            image = self.crop_image(xmin, ymin, xmax, ymax, frame)
+            old_images = self.get_person_images(track["id"], db_conn)
+            self.insert_image(track["id"], image, db_conn)
+
+            # Define the highlight color and thickness
+            highlight_color = (0, 0, 255)
+            highlight_thickness = 2
+
+            # Create a copy of the selected image and draw a rectangle around it
+            highlighted_image = image.copy()
+            cv2.rectangle(highlighted_image, (0, 0), (image.shape[1], image.shape[0]), highlight_color, highlight_thickness)
+
+            # Resize the images to a common height using cv2.resize()
+            height = 300
+            width = 100
+            resized_images = [cv2.resize(image, (width, height)) for image in old_images]
+            width = int(height * image.shape[1] / image.shape[0])
+            resized_highlighted_image = cv2.resize(highlighted_image, (width, height))
+            resized_images.append(resized_highlighted_image)
+            hconcat1 = cv2.hconcat(resized_images)
+
+            cv2.imshow(f'Player {track["id"]}', hconcat1)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     def update_tracker_output(self, frame, tresh, db_conn):
         self.frame_num += 1
@@ -330,6 +363,28 @@ class Tracker:
         features = np.squeeze(features, axis=1)  # remove extra dimension
 
         return features
+    
+    def insert_image(self, person_id, image, db_conn):
+        _, buffer = cv2.imencode('.jpg', image)
+        image_data = buffer.tobytes()
+
+         # insert the feature vector into the database
+        db_conn.execute(
+            'INSERT INTO images (person_id, image) VALUES (?, ?)', (person_id, image_data))
+
+        # commit the transaction and close the connection
+        db_conn.commit()
+
+    def get_person_images(self, person_id, db_conn):
+        images = []
+        cursor = db_conn.execute(
+            'SELECT image FROM images WHERE person_id = ?', (person_id,))
+        for row in cursor:
+            image_data = np.frombuffer(row[0], dtype=np.uint8)
+            image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+            images.append(image)
+
+        return images
 
     def insert_feature(self, person_id, feature, db_conn):
         # convert feature vector to bytes using pickle
@@ -350,3 +405,10 @@ class Tracker:
         person_ids = [result[0] for result in results]
 
         return person_ids
+    
+    def is_valid_bbox(self, xmin, ymin, xmax, ymax):
+
+        w = xmax - xmin
+        h = ymax - ymin
+
+        return h / w > self.min_box_size and w >= self.min_box_width
