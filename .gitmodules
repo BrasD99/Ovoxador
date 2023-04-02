@@ -4,3 +4,6 @@
 [submodule "PARE"]
 	path = PARE
 	url = https://github.com/BrasD99/PARE.git
+[submodule "OvoxadorVR"]
+	path = OvoxadorVR
+	url = https://github.com/BrasD99/OvoxadorVR.git
