@@ -11,6 +11,7 @@
     "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
     "MAX_VIDEO_LENGTH": 2,
     "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
+    "USE_LATEST_DETECTOR": 0,
     "DEFAULT_CAMERA_PARAMS": {
         "CAMERA_FPS": 5,
         "PLAYER_DETECTION_TRESH": 0.8,

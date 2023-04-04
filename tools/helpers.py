@@ -71,6 +71,7 @@ def get_cameras_config(cfg, camera_ids):
         camera_params["TEXTURES_MODE"] = cfg["TEXTURES_MODE"]
         camera_params["TEXTURES_FREQ"] = cfg["TEXTURES_FREQ"]
         camera_params["OUTPUT_FRAMES_SPLIT"] = cfg["OUTPUT_FRAMES_SPLIT"]
+        camera_params["USE_LATEST_DETECTOR"] = cfg["USE_LATEST_DETECTOR"]
 
         output[camera_id] = camera_params
     return output

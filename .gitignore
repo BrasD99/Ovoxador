@@ -3,3 +3,4 @@ yolov8l.pt
 __pycache__
 tools/__pycache__
 app/__pycache__
+yolov5s.pt
