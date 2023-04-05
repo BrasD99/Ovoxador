@@ -20,7 +20,7 @@ class Camera:
             player_prob_tresh=cfg['PLAYER_DETECTION_TRESH'],
             ball_prob_tresh=cfg['BALL_DETECTION_TRESH'],
             class_ids=list(self.classes.values()),
-            use_latest=cfg['USE_LATEST_DETECTOR'])
+            use_latest=cfg['USE_YOLOv8'])
         self.player_tracker = Tracker(
             cfg, reID_model_path=cfg['REID_MODEL_PATH'], homography=homography, nms_max_overlap=cfg['MAX_BBOX_OVERLAP'])
         self.ball_detections = []
