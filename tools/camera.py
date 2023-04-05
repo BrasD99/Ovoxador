@@ -17,8 +17,8 @@ class Camera:
         self.camera_id = camera_id
         self.classes = {'player': 0, 'ball': 32}
         self.detector = Detector(
-            player_prob_thresh=cfg['PLAYER_DETECTION_TRESH'],
-            ball_prob_thresh=cfg['BALL_DETECTION_TRESH'],
+            player_prob_tresh=cfg['PLAYER_DETECTION_TRESH'],
+            ball_prob_tresh=cfg['BALL_DETECTION_TRESH'],
             class_ids=list(self.classes.values()),
             use_latest=cfg['USE_LATEST_DETECTOR'])
         self.player_tracker = Tracker(
