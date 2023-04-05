@@ -431,7 +431,7 @@ class Tracker:
 
         return h / w > self.min_box_size and w >= self.min_box_width
     
-    def is_full_body(self, image, tresh=0.84):
+    def is_full_body(self, image, shoulder_tresh=0.1, hip_tresh=0.1, nose_tresh=0.1, knee_tresh=0.75):
         pose_results = self.pose_estimator.process(image)
 
         if pose_results.pose_landmarks is not None:
@@ -440,7 +440,13 @@ class Tracker:
             keypoints = {name: landmarks[getattr(self.mp_pose.PoseLandmark, name)] for name in keypoint_names}
 
             # Check if all keypoints have sufficient visibility confidence
-            if all(kp.visibility >= tresh for kp in keypoints.values()):
+            if keypoints['LEFT_SHOULDER'].visibility >= shoulder_tresh and \
+            keypoints['RIGHT_SHOULDER'].visibility >= shoulder_tresh and \
+            keypoints['LEFT_HIP'].visibility >= hip_tresh and \
+            keypoints['RIGHT_HIP'].visibility >= hip_tresh and \
+            keypoints['LEFT_KNEE'].visibility >= knee_tresh and \
+            keypoints['RIGHT_KNEE'].visibility >= knee_tresh and \
+            keypoints['NOSE'].visibility >= nose_tresh:
                 return True, {name: kp.visibility for name, kp in keypoints.items()}
             
         return False, {}
