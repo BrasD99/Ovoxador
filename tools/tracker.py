@@ -12,6 +12,8 @@ import os
 import pickle
 import math
 
+import mediapipe as mp
+
 
 class Tracker:
     def __init__(self,
@@ -31,6 +33,11 @@ class Tracker:
         self.tracking_output = []
         self.frame_num = 0
         self.reidentificator = Reidentificator(cfg)
+        self.mp_pose = mp.solutions.pose
+        self.pose_estimator = self.mp_pose.Pose(
+            static_image_mode=False, 
+            min_detection_confidence=0.5, 
+            min_tracking_confidence=0.5)
         self.track_ids = []
         self.reid_tresh = cfg['REIDENTIFICATION_TRESH']
         self.reid_batch_size = cfg['REIDENTIFICATION_BATCH_SIZE']
@@ -90,25 +97,29 @@ class Tracker:
             box = track.to_tlbr().astype(int)
             xmin, ymin, xmax, ymax = box
 
-            if self.check_point(xmin + (xmin - xmax) // 2, ymax) and self.is_valid_bbox(xmin, ymin, xmax, ymax):
+            if self.check_point(xmin + (xmin - xmax) // 2, ymax) and \
+                self.is_valid_bbox(xmin, ymin, xmax, ymax):
                 image = self.crop_image(xmin, ymin, xmax, ymax, frame)
                 if image.size != 0:
-                    image_features = self.reidentificator.get_image_features(image)
-                    buffer[track_id] = {
-                        'parent_track_id': None,
-                        'connections': None,
-                        'features': image_features,
-                        'box': box
-                    }
-                    # Check if we have connection with another track
-                    parent_track_id = self.find_parent_track(track_id)
-                    # If we found parent track from dictionary of connections
-                    if parent_track_id:
-                        buffer[track_id]['parent_track_id'] = parent_track_id
-                    # There is no any connection
-                    else:
-                        # Getting distances with previous tracks' images
-                        buffer[track_id]['connections'] = self.find_distances(tresh, db_conn, image_features, db_person_ids)
+                    is_full_body, body_visibilities = self.is_full_body(image)
+                    if is_full_body:
+                        image_features = self.reidentificator.get_image_features(image)
+                        buffer[track_id] = {
+                            'parent_track_id': None,
+                            'connections': None,
+                            'features': image_features,
+                            'box': box,
+                            'body_visibilities': body_visibilities
+                        }
+                        # Check if we have connection with another track
+                        parent_track_id = self.find_parent_track(track_id)
+                        # If we found parent track from dictionary of connections
+                        if parent_track_id:
+                            buffer[track_id]['parent_track_id'] = parent_track_id
+                        # There is no any connection
+                        else:
+                            # Getting distances with previous tracks' images
+                            buffer[track_id]['connections'] = self.find_distances(tresh, db_conn, image_features, db_person_ids)
 
         # Process found parent tracks
         tracks = []
@@ -118,8 +129,9 @@ class Tracker:
                 parent_track_id = value['parent_track_id']
                 image_features = value['features']
                 box = value['box']
+                body_visibilities = value['body_visibilities']
                 blocked_parent_track_ids.append(parent_track_id)
-                tracks.append({'id': parent_track_id, 'box': box})
+                tracks.append({'id': parent_track_id, 'box': box, 'body_visibilities': body_visibilities})
                 self.insert_feature(parent_track_id, image_features, db_conn)
 
         # Process optimal connections
@@ -134,14 +146,18 @@ class Tracker:
             if person_id_connections:
                 track_id = min(person_id_connections, key=person_id_connections.get)
                 blocked_track_ids.append(track_id)
-                tracks.append({'id': person_id, 'box': results[track_id]['box']})
+                tracks.append({
+                    'id': person_id, 
+                    'box': results[track_id]['box'], 
+                    'body_visibilities': results[track_id]['body_visibilities']
+                })
                 self.track_bundles[person_id].append(track_id)
                 self.insert_feature(person_id, results[track_id]['features'], db_conn)
 
         # Process other tracks
         for track_id, value in results.items():
             if track_id not in blocked_track_ids:
-                tracks.append({'id': track_id, 'box': value['box']})
+                tracks.append({'id': track_id, 'box': value['box'], 'body_visibilities': value['body_visibilities']})
                 self.track_bundles[track_id] = []
                 self.insert_feature(track_id, value['features'], db_conn)
 
@@ -179,6 +195,8 @@ class Tracker:
             resized_highlighted_image = cv2.resize(highlighted_image, (width, height))
             resized_images.append(resized_highlighted_image)
             hconcat1 = cv2.hconcat(resized_images)
+
+            print(track['body_visibilities'])
 
             cv2.imshow(f'Player {track["id"]}', hconcat1)
             cv2.waitKey(0)
@@ -412,3 +430,17 @@ class Tracker:
         h = ymax - ymin
 
         return h / w > self.min_box_size and w >= self.min_box_width
+    
+    def is_full_body(self, image, tresh=0.84):
+        pose_results = self.pose_estimator.process(image)
+
+        if pose_results.pose_landmarks is not None:
+            landmarks = pose_results.pose_landmarks.landmark
+            keypoint_names = ['LEFT_SHOULDER', 'RIGHT_SHOULDER', 'LEFT_HIP', 'RIGHT_HIP', 'LEFT_KNEE', 'RIGHT_KNEE', 'NOSE']
+            keypoints = {name: landmarks[getattr(self.mp_pose.PoseLandmark, name)] for name in keypoint_names}
+
+            # Check if all keypoints have sufficient visibility confidence
+            if all(kp.visibility >= tresh for kp in keypoints.values()):
+                return True, {name: kp.visibility for name, kp in keypoints.items()}
+            
+        return False, {}

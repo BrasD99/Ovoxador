@@ -10,7 +10,7 @@ class Detector:
         if self.use_latest:
             self.model = YOLO('yolov8l.pt')
         else:
-            self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+            self.model = torch.hub.load('ultralytics/yolov5', 'yolov5x')
 
     def predict(self, image):
         classes = []
