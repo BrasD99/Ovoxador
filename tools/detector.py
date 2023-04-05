@@ -21,39 +21,31 @@ class Detector:
 
         if self.use_latest:
             for box in outputs[0].boxes:
-                class_id = box.cls.item()
-                score = box.conf.item()
+                class_id = int(box.cls)
+                score = float(box.conf)
                 if class_id in self.class_ids:
-                    if class_id == 0:
-                        if score >= self.player_prob_thresh:
-                            x1, y1, w, h = [box.xywh[0][i].item()
-                                            for i in range(4)]
-                            b_box = [x1 - w / 2, y1 - h / 2, w, h]
-                            classes.append(class_id)
-                            boxes.append(b_box)
-                            scores.append(score)
-                    else:
-                        if score >= self.ball_prob_tresh:
-                            x1, y1, w, h = [box.xywh[0][i].item()
-                                            for i in range(4)]
-                            b_box = [x1 - w / 2, y1 - h / 2, w, h]
-                            classes.append(class_id)
-                            boxes.append(b_box)
-                            scores.append(score)
+                    threshold = self.player_prob_tresh if class_id == 0 else self.ball_prob_tresh
+                    if score >= threshold:
+                        x1, y1, w, h = [float(coord) for coord in box.xywh[0]]
+                        b_box = [x1 - w / 2, y1 - h / 2, w, h]
+                        classes.append(class_id)
+                        boxes.append(b_box)
+                        scores.append(score)
         else:
-            for _, row in outputs.pandas().xywh[0].iterrows():
-                if row['class'] in self.class_ids:
-                    if row['class'] == 0:
-                        if row['confidence'] >= self.player_prob_thresh:
-                            b_box = [row['xcenter'], row['ycenter'], row['width'], row['height']]
-                            classes.append(row['class'])
+            for i in range(outputs.n):
+                class_ids = outputs.pred[i][:, -1].int()
+                confidences = outputs.pred[i][:, 4].float()
+                bboxes = outputs.pred[i][:, :4]
+
+                for class_id, confidence, bbox in zip(class_ids, confidences, bboxes):
+                    if class_id in self.class_ids:
+                        threshold = self.player_prob_tresh if class_id == 0 else self.ball_prob_tresh
+                        if confidence >= threshold:
+                            x1, y1, x2, y2 = bbox.cpu().numpy()
+                            w, h = x2 - x1, y2 - y1
+                            b_box = [x1, y1, w, h]
+                            classes.append(int(class_id))
                             boxes.append(b_box)
-                            scores.append(row['confidence'])
-                    else:
-                        if row['confidence'] >= self.ball_prob_tresh:
-                            b_box = [row['xcenter'], row['ycenter'], row['width'], row['height']]
-                            classes.append(row['class'])
-                            boxes.append(b_box)
-                            scores.append(row['confidence'])
+                            scores.append(float(confidence))
 
         return {'classes': classes, 'boxes': boxes, 'scores': scores}
