@@ -22,8 +22,7 @@
         "BOX_SIZE_TRESHTOLD": 1.0,
         "BOX_SIZE_TRESHTOLD_MAX": 30.6,
         "MIN_BOX_WIDTH": 10,
-        "BOX_ANALYTICS_ENABLED": 1,
-        "EXPORT_BOX_ANALYTICS": 1,
+        "BOX_ANALYTICS_ENABLED": 0,
         "BOX_POSE": {
             "SHOULDER_TRESH": 0.6,
             "HIP_TRESH": 0.5,
