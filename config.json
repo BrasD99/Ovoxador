@@ -9,36 +9,63 @@
     "OUTPUT_FRAMES_SPLIT": 20,
     "PARE_CFG": "data/pare/checkpoints/pare_w_3dpw_config.yaml",
     "PARE_CKPT": "data/pare/checkpoints/pare_w_3dpw_checkpoint.ckpt",
-    "MAX_VIDEO_LENGTH": 2,
+    "MAX_VIDEO_LENGTH": -1,
     "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
     "USE_YOLOv8": 0,
     "DEFAULT_CAMERA_PARAMS": {
-        "CAMERA_FPS": 5,
-        "PLAYER_DETECTION_TRESH": 0.8,
+        "CAMERA_FPS": 24,
+        "PLAYER_DETECTION_TRESH": 0.7,
         "BALL_DETECTION_TRESH": 0.2,
         "MAX_BBOX_OVERLAP": 0.8,
         "REIDENTIFICATION_TRESH": 200,
         "REIDENTIFICATION_BATCH_SIZE": 30,
-        "BOX_SIZE_TRESHTOLD": 2.0,
-        "MIN_BOX_WIDTH": 30,
+        "BOX_SIZE_TRESHTOLD": 1.0,
+        "BOX_SIZE_TRESHTOLD_MAX": 30.6,
+        "MIN_BOX_WIDTH": 10,
         "BOX_ANALYTICS_ENABLED": 1,
-        "EXPORT_BOX_ANALYTICS": 1
+        "EXPORT_BOX_ANALYTICS": 1,
+        "BOX_POSE": {
+            "SHOULDER_TRESH": 0.6,
+            "HIP_TRESH": 0.5,
+            "ANKLE_TRESH": 0.8,
+            "ELBOW_TRESH": 0.8,
+            "NOSE_TRESH": 0.8
+        }
     },
     "CAMERA_OVERRIDEN_PARAMS": {
         "0": {
-            "PLAYER_DETECTION_TRESH": 0.75,
+            "PLAYER_DETECTION_TRESH": 0.6,
             "BALL_DETECTION_TRESH": 0.1,
             "MAX_BBOX_OVERLAP": 0.4
         },
         "1": {
-            "PLAYER_DETECTION_TRESH": 0.5,
+            "PLAYER_DETECTION_TRESH": 0.7,
             "BALL_DETECTION_TRESH": 0.1,
-            "MAX_BBOX_OVERLAP": 0.8
+            "MAX_BBOX_OVERLAP": 0.9,
+            "MIN_BOX_WIDTH": 15,
+            "REIDENTIFICATION_TRESH": 100,
+            "BOX_POSE": {
+                "SHOULDER_TRESH": 0.5,
+                "HIP_TRESH": 0.5,
+                "ANKLE_TRESH": 0.6,
+                "ELBOW_TRESH": 0.7,
+                "NOSE_TRESH": 0.65
+            }
         },
         "2": {
-            "PLAYER_DETECTION_TRESH": 0.5,
+            "PLAYER_DETECTION_TRESH": 0.3,
             "BALL_DETECTION_TRESH": 0.1,
-            "MAX_BBOX_OVERLAP": 0.8
+            "MAX_BBOX_OVERLAP": 0.9,
+            "BOX_SIZE_TRESHTOLD": 2.0,
+            "BOX_SIZE_TRESHTOLD_MAX": 50,
+            "MIN_BOX_WIDTH": 5,
+            "BOX_POSE": {
+                "SHOULDER_TRESH": 0.3,
+                "HIP_TRESH": 0.3,
+                "ANKLE_TRESH": 0.3,
+                "ELBOW_TRESH": 0.3,
+                "NOSE_TRESH": 0.3
+            }
         }
     }
 }

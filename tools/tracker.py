@@ -35,15 +35,18 @@ class Tracker:
         self.reidentificator = Reidentificator(cfg)
         self.mp_pose = mp.solutions.pose
         self.pose_estimator = self.mp_pose.Pose(
-            static_image_mode=False, 
+            static_image_mode=False,
+            model_complexity = 2,
             min_detection_confidence=0.5, 
             min_tracking_confidence=0.5)
         self.track_ids = []
         self.reid_tresh = cfg['REIDENTIFICATION_TRESH']
         self.reid_batch_size = cfg['REIDENTIFICATION_BATCH_SIZE']
         self.min_box_size = cfg['BOX_SIZE_TRESHTOLD']
+        self.max_box_size = cfg['BOX_SIZE_TRESHTOLD_MAX']
         self.min_box_width = cfg['MIN_BOX_WIDTH']
         self.box_analytics_enabled = cfg['BOX_ANALYTICS_ENABLED']
+        self.box_pose_tresh = cfg['BOX_POSE']
         self.track_bundles = {}
         self.first_frame = True
         self.homography = homography
@@ -101,7 +104,7 @@ class Tracker:
                 self.is_valid_bbox(xmin, ymin, xmax, ymax):
                 image = self.crop_image(xmin, ymin, xmax, ymax, frame)
                 if image.size != 0:
-                    is_full_body, body_visibilities = self.is_full_body(image)
+                    is_full_body, body_visibilities = self.is_full_body(image, self.box_pose_tresh)
                     if is_full_body:
                         image_features = self.reidentificator.get_image_features(image)
                         buffer[track_id] = {
@@ -197,6 +200,8 @@ class Tracker:
             hconcat1 = cv2.hconcat(resized_images)
 
             print(track['body_visibilities'])
+            xmin, ymin, xmax, ymax = track['box']
+            print((ymax - ymin) / (xmax - xmin))
 
             cv2.imshow(f'Player {track["id"]}', hconcat1)
             cv2.waitKey(0)
@@ -425,28 +430,42 @@ class Tracker:
         return person_ids
     
     def is_valid_bbox(self, xmin, ymin, xmax, ymax):
-
         w = xmax - xmin
         h = ymax - ymin
-
-        return h / w > self.min_box_size and w >= self.min_box_width
+        return h / w >= self.min_box_size and \
+            h / w <= self.max_box_size and \
+            w >= self.min_box_width
     
-    def is_full_body(self, image, shoulder_tresh=0.1, hip_tresh=0.1, nose_tresh=0.1, knee_tresh=0.75):
+    def is_full_body(
+            self, 
+            image, 
+            box_pose):
         pose_results = self.pose_estimator.process(image)
 
         if pose_results.pose_landmarks is not None:
             landmarks = pose_results.pose_landmarks.landmark
-            keypoint_names = ['LEFT_SHOULDER', 'RIGHT_SHOULDER', 'LEFT_HIP', 'RIGHT_HIP', 'LEFT_KNEE', 'RIGHT_KNEE', 'NOSE']
+            keypoint_names = [
+                'LEFT_SHOULDER', 
+                'RIGHT_SHOULDER', 
+                'LEFT_HIP', 
+                'RIGHT_HIP', 
+                'LEFT_ANKLE', 
+                'RIGHT_ANKLE', 
+                'LEFT_ELBOW', 
+                'RIGHT_ELBOW', 
+                'NOSE']
             keypoints = {name: landmarks[getattr(self.mp_pose.PoseLandmark, name)] for name in keypoint_names}
 
             # Check if all keypoints have sufficient visibility confidence
-            if keypoints['LEFT_SHOULDER'].visibility >= shoulder_tresh and \
-            keypoints['RIGHT_SHOULDER'].visibility >= shoulder_tresh and \
-            keypoints['LEFT_HIP'].visibility >= hip_tresh and \
-            keypoints['RIGHT_HIP'].visibility >= hip_tresh and \
-            keypoints['LEFT_KNEE'].visibility >= knee_tresh and \
-            keypoints['RIGHT_KNEE'].visibility >= knee_tresh and \
-            keypoints['NOSE'].visibility >= nose_tresh:
+            if (keypoints['LEFT_SHOULDER'].visibility >= box_pose['SHOULDER_TRESH'] or \
+            keypoints['RIGHT_SHOULDER'].visibility >= box_pose['SHOULDER_TRESH']) and \
+            (keypoints['LEFT_HIP'].visibility >= box_pose['HIP_TRESH'] or \
+            keypoints['RIGHT_HIP'].visibility >= box_pose['HIP_TRESH']) and \
+            (keypoints['LEFT_ANKLE'].visibility >= box_pose['ANKLE_TRESH'] or \
+            keypoints['RIGHT_ANKLE'].visibility >= box_pose['ANKLE_TRESH']) and \
+            (keypoints['LEFT_ELBOW'].visibility >= box_pose['ELBOW_TRESH'] or \
+            keypoints['RIGHT_ELBOW'].visibility >= box_pose['ELBOW_TRESH']) and \
+            keypoints['NOSE'].visibility >= box_pose['NOSE_TRESH']:
                 return True, {name: kp.visibility for name, kp in keypoints.items()}
             
         return False, {}
