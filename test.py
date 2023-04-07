@@ -7,7 +7,6 @@ from tools.pose import PoseEstimator
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-
 #f = open('/Users/brasd99/Desktop/Dissertation/outputs/project/dump/cameras.json')
 #cameras_players = json.load(f)
 #f.close()
@@ -30,7 +29,7 @@ tr_path = '/Users/brasd99/Desktop/Dissertation/Ovoxador/data/videos/camera_2.mov
 
 videos = [main_path, tl_path, tr_path]
 
-output_path = '/Users/brasd99/Desktop/Dissertation/outputs/project2'
+output_path = '/Users/brasd99/Desktop/Dissertation/outputs/project'
 
 output_src_dict = create_output_directory(output_path, videos)
 

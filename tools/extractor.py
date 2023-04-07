@@ -24,6 +24,7 @@ import imageio
 import copy
 from UVTextureConverter import Atlas2Normal
 import matplotlib.pyplot as plt
+import io
 
 
 class Extractor:
@@ -218,8 +219,13 @@ class Extractor:
         # Bug fix, if we havent found detections on small video len
         if player_texture is None or not player_texture.any():
             player_texture = np.zeros((1200, 800, 3), dtype=np.uint8)
-
-        player_texture = self.convert_to_normal(player_texture)
+        
+        atlas_texture_bytes = io.BytesIO()
+        imageio.imwrite(atlas_texture_bytes, texture, format='PNG')
+        atlas_texture_array = np.frombuffer(atlas_texture_bytes.getvalue(), dtype=np.uint8)
+        atlas_texture = cv2.imdecode(atlas_texture_array, cv2.IMREAD_COLOR)
+        atlas_texture = cv2.cvtColor(atlas_texture, cv2.COLOR_BGR2RGB)
+        player_texture = self.convert_to_normal(atlas_texture.transpose(1, 0, 2))
         imageio.imwrite(f'{textures_path}/player_{main_player_id}.png', player_texture)
 
     def convert_to_normal(self, texture):

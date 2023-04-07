@@ -42,7 +42,7 @@ class Camera:
 
         frames_count = int(processed_clip.fps * processed_clip.duration)
 
-        desc = f'Processing camera №{self.camera_id} [frames≈{frames_count}]'
+        desc = f'Processing camera №{self.camera_id} [frames≈{frames_count + 1}]'
         if self.camera_id == 0:
             desc = f'Processing main camera [frames≈{frames_count}]'
 
