@@ -181,13 +181,10 @@ def get_texture(im, iuv, bbox, tex_part_size=200):
 def create_iuv(results, image):
     iuv = parse_iuv(results)
     bbox = parse_bbox(results)
-    # image = cv2.imread(image)[:, :, ::-1]
-    # image = image[:, :, ::-1]
     uv_texture = get_texture(image, iuv, bbox)
     # plot texture or do whatever you like
     uv_texture = uv_texture.transpose([1, 0, 2])
     return uv_texture
-    # imageio.imwrite(outputName, uv_texture)
 
 
 class bcolors:
