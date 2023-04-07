@@ -12,6 +12,7 @@
     "MAX_VIDEO_LENGTH": -1,
     "OUTPUT_FOLDER": "/Users/brasd99/Desktop/Dissertation/outputs/project",
     "USE_YOLOv8": 0,
+    "UNITY_EXECUTABLE": "/Users/brasd99/Desktop/Dissertation/VR-executable/Ovoxador.app",
     "DEFAULT_CAMERA_PARAMS": {
         "CAMERA_FPS": 24,
         "PLAYER_DETECTION_TRESH": 0.7,

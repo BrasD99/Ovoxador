@@ -3,6 +3,7 @@ import os
 import cv2
 import numpy as np
 import shutil
+import subprocess
 
 
 def filter_detections(detections, filter_class_id):
@@ -533,7 +534,7 @@ def create_output_directory(output_path, videos):
     homographies_path = os.path.join(output_path, 'homography')
     analytics_path = os.path.join(output_path, 'analytics')
     heatmaps_path = os.path.join(output_path, 'heatmaps')
-    dump_folder = os.path.join(output_path, 'dump')
+    dump_folder = os.path.join(output_path, 'dumps')
     path_arr = [videos_path, frames_path, textures_path,
                 homographies_path, analytics_path, heatmaps_path, 
                 dump_folder]
@@ -647,3 +648,8 @@ def split_dict(input, n):
     for sublist in sublists:
         output.append(dict(sublist))
     return output
+
+def run_unity(unity_app, project_location):
+    app_args = ["-projectLocation", project_location]
+    open_args = ["-n", unity_app, "--args"] + app_args
+    subprocess.call(["/usr/bin/open"] + open_args)
