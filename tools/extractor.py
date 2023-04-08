@@ -25,6 +25,7 @@ import copy
 from UVTextureConverter import Atlas2Normal
 import matplotlib.pyplot as plt
 import io
+from sklearn.cluster import KMeans
 
 
 class Extractor:
@@ -300,6 +301,18 @@ class Extractor:
             temp_output = copy.deepcopy(data)
             temp_output['frames'] = frames_dict
             self.create_dump(temp_output, os.path.join(dump_folder, f'{i}.json'))
+
+    def get_ball_texture(self, image, width=512, height=512):
+        # Reshape the image to a list of pixels
+        pixels = image.reshape((-1, 3))
+        # Apply k-means clustering to the pixels to extract the primary color
+        kmeans = KMeans(n_clusters=1, random_state=0).fit(pixels)
+        primary_color = tuple(kmeans.cluster_centers_[0].astype(int))
+        # Define the dimensions of the texture image
+        # Create a new image with the desired dimensions and fill it with the primary color
+        texture_img = np.zeros((height, width, 3), np.uint8)
+        texture_img[:] = primary_color
+        return texture_img
 
     def create_dump(self, data, dump_file):
         with open(dump_file, 'wb') as file:
