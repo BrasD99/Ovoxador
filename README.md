@@ -28,9 +28,9 @@
 - [x] Reidentification optimization (now we are using SQLite database to store features)
 - [x] Beautiful animated gif for README ;)
 - [x] Multithreading support to speed up the work of modules
-- [ ] Calculation of performance metrics of athletes
-- [ ] GUI refinement
-- [ ] VR/AR solution using Unity (will be moved to another repository)
+- [x] Calculation of performance metrics of athletes
+- [x] GUI refinement
+- [x] VR/AR solution using Unity (will be moved to another repository)
 
 💻 Testing on macOS 💻<br>
 :warning: The project is under development! :warning:
